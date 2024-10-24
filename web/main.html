@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real Madrid Bot</title>
+    <link rel="icon" type="image/x-icon" href="ico1.ico?v=2"  />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.3.0/font/bootstrap-icons.css" />
+    <link rel="stylesheet" href="style.css">
+    <script src="eel.js"></script>
+</head>
+<body>
+    <div class="main">
+        <div class="inputs">
+            <h3>Initial Url</h3>
+            <input type="text" id="initialUrl" name="initialUrl" placeholder="https://example.com">
+        </div>
+        <div class="inputs">
+            <h3>Server port</h3>
+            <input type="text" id="serverPort" name="serverPort" placeholder="3309">
+        </div>
+        <div class="inputs">
+            <h3>Server Name</h3>
+            <input type="text" id="serverName" name="serverName" placeholder="S3U1 (Пушкіна)">
+        </div>
+
+        <div class="inputs">
+            <h3>Browsers amount</h3>
+            <input type="number" id="browserAmount" name="browserAmount" placeholder="1-9999">
+        </div>
+
+        <h3>Оберіть вирішувач капчі:</h3>
+        <div class="radio">
+            <form id="captchaForm">
+                <label for="isNopeCha">NopeCha</label>
+                <input type="radio" id="isNopeCha" name="captchaSolver" value="nopecha" checked>
+                
+                <label for="isVpn">Вбудований вирішувач</label>
+                <input type="radio" id="isVpn" name="captchaSolver" value="integrated">
+            </form>
+        </div>
+
+        <div class="inputs proxy-input">
+            <h3>Proxy input:</h3>
+            <textarea name="proxyInput" class="textareaNormal" placeholder="ip:port:login:password&#10;ip:port:login:password&#10;ip:port:login:password&#10;"></textarea>
+        </div>
+        <div class="buttons">
+            <div class="start">
+              <button id="run" class="active">Start</button>
+          </div>
+        </div>
+    </div>
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <script type="text/javascript">
+        async function start(button) {
+            if (button.getAttribute("class") == "active") {
+                button.innerHTML = '';
+                button.style.color = "#0F2027";
+                
+                // Collect all input values
+                const initialUrl = document.querySelector('#initialUrl').value;
+                const serverPort = document.querySelector('#serverPort').value;
+                const serverName = document.querySelector('#serverName').value;
+                const browsersAmount = document.querySelector('#browserAmount').value;
+
+                // Get selected CAPTCHA solver (radio button)
+                const captchaSolver = document.querySelector('input[name="captchaSolver"]:checked').value;
+
+                // Get proxy input or Adspower input based on user's selection
+                const proxyInput = document.querySelector('textarea[name="proxyInput"]').value;
+
+                // Log or send data to the backend
+                console.log({
+                    initialUrl,
+                    serverPort,
+                    serverName,
+                    browsersAmount,
+                    captchaSolver,
+                    proxyInput,
+                });
+
+                // If needed, trigger Eel backend call
+                await eel.main(initialUrl, serverName, serverPort, captchaSolver, browsersAmount, proxyInput)();
+                
+                // Close window after starting
+                closeWindow();
+            }
+        }
+
+        function closeWindow() {
+            let new_window = open(location, '_self');
+            new_window.top.close();
+        }
+
+        function main() {
+            const button = document.querySelector('#run');
+            if (button.innerHTML == "Start") start(button);
+        }
+
+        // Start button click event listener
+        jQuery('#run').on('click', function() {
+            main();
+        });
+    </script>
+</body>
+</html>

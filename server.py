@@ -1,21 +1,95 @@
+from fastapi.middleware.cors import CORSMiddleware
 import json
 import re
 import os
 from urllib.parse import urlparse
+import time
 
 from CloudflareBypasser import CloudflareBypasser
 from DrissionPage import ChromiumPage, ChromiumOptions
 from fastapi import FastAPI, HTTPException, Response
 from pydantic import BaseModel
-from typing import Dict
+import shutil, tempfile
+from typing import List
 import argparse
 
 # Check if running in Docker mode
 DOCKER_MODE = os.getenv("DOCKERMODE", "false").lower() == "true"
 
+
+class ProxyExtension:
+    manifest_json = """
+    {
+        "version": "1.0.0",
+        "manifest_version": 2,
+        "name": "Chrome Proxy",
+        "permissions": [
+            "proxy",
+            "tabs",
+            "unlimitedStorage",
+            "storage",
+            "<all_urls>",
+            "webRequest",
+            "webRequestBlocking"
+        ],
+        "background": {"scripts": ["background.js"]},
+        "minimum_chrome_version": "76.0.0"
+    }
+    """
+
+    background_js = """
+    var config = {
+        mode: "fixed_servers",
+        rules: {
+            singleProxy: {
+                scheme: "http",
+                host: "%s",
+                port: %d
+            },
+            bypassList: ["localhost"]
+        }
+    };
+
+    chrome.proxy.settings.set({value: config, scope: "regular"}, function() {});
+
+    function callbackFn(details) {
+        return {
+            authCredentials: {
+                username: "%s",
+                password: "%s"
+            }
+        };
+    }
+
+    chrome.webRequest.onAuthRequired.addListener(
+        callbackFn,
+        { urls: ["<all_urls>"] },
+        ['blocking']
+    );
+    """
+
+    def __init__(self, host, port, user, password):
+        self._dir = os.path.normpath(tempfile.mkdtemp())
+
+        manifest_file = os.path.join(self._dir, "manifest.json")
+        with open(manifest_file, mode="w") as f:
+            f.write(self.manifest_json)
+
+        background_js = self.background_js % (host, port, user, password)
+        background_file = os.path.join(self._dir, "background.js")
+        with open(background_file, mode="w") as f:
+            f.write(background_js)
+
+    @property
+    def directory(self):
+        return self._dir
+
+    def __del__(self):
+        shutil.rmtree(self._dir)
+
+
 # Chromium options arguments
 arguments = [
-    # "--remote-debugging-port=9222",  # Add this line for remote debugging
     "-no-first-run",
     "-force-color-profile=srgb",
     "-metrics-recording-only",
@@ -29,17 +103,31 @@ arguments = [
     "-deny-permission-prompts",
     "-disable-gpu",
     "-accept-lang=en-US",
-    #"-incognito" # You can add this line to open the browser in incognito mode by default 
 ]
 
 browser_path = "/usr/bin/google-chrome"
 app = FastAPI()
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Change to your allowed origins
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-# Pydantic model for the response
+
+class Cookie(BaseModel):
+    name: str
+    value: str
+    domain: str
+
+
 class CookieResponse(BaseModel):
-    cookies: Dict[str, str]
+    cookies: List[Cookie]
     user_agent: str
+    proxy: str
+    url: str
 
 
 # Function to check if the URL is safe
@@ -55,7 +143,7 @@ def is_safe_url(url: str) -> bool:
 
 
 # Function to bypass Cloudflare protection
-def bypass_cloudflare(url: str, retries: int, log: bool) -> ChromiumPage:
+def bypass_cloudflare(url: str, proxy: str, user_agent: str, retries: int, log: bool) -> ChromiumPage:
     from pyvirtualdisplay import Display
 
     if DOCKER_MODE:
@@ -69,11 +157,24 @@ def bypass_cloudflare(url: str, retries: int, log: bool) -> ChromiumPage:
         options.set_argument("--no-sandbox")  # Necessary for Docker
         options.set_argument("--disable-gpu")  # Optional, helps in some cases
         options.set_paths(browser_path=browser_path).headless(False)
+        if proxy and proxy != 'vpn':
+            proxy = proxy.split(":", 3)
+            proxy[1] = int(proxy[1])
+            proxy_extension = ProxyExtension(*proxy)
+            options.add_extension(proxy_extension.directory)
+        if user_agent:
+            options.set_argument(f'--user-agent={user_agent}')
     else:
         options = ChromiumOptions()
         options.set_argument("--auto-open-devtools-for-tabs", "true")
         options.set_paths(browser_path=browser_path).headless(False)
-
+        if proxy and proxy != 'vpn':
+            proxy = proxy.split(":", 3)
+            proxy[1] = int(proxy[1])
+            proxy_extension = ProxyExtension(*proxy)
+            options.add_extension(proxy_extension.directory)
+        if user_agent:
+            options.set_argument(f'--user-agent={user_agent}')
     driver = ChromiumPage(addr_or_opts=options)
     try:
         driver.get(url)
@@ -89,28 +190,35 @@ def bypass_cloudflare(url: str, retries: int, log: bool) -> ChromiumPage:
 
 # Endpoint to get cookies
 @app.get("/cookies", response_model=CookieResponse)
-async def get_cookies(url: str, retries: int = 5):
+async def get_cookies(url: str, proxy: str, user_agent: str, retries: int = 5):
+    print(url, proxy, user_agent, retries)
     if not is_safe_url(url):
         raise HTTPException(status_code=400, detail="Invalid URL")
     try:
-        driver = bypass_cloudflare(url, retries, log)
-        cookies = driver.cookies(as_dict=True)
+        driver = bypass_cloudflare(url, proxy, user_agent, retries, log)
+        print(driver.cookies(as_dict=False))
+        cookies_list = [
+            Cookie(name=cookie["name"], value=cookie["value"], domain=cookie["domain"])
+            for cookie in driver.cookies(as_dict=False)
+        ]
         user_agent = driver.user_agent
+        driver_url = driver.url
         driver.quit()
-        return CookieResponse(cookies=cookies, user_agent=user_agent)
+        return CookieResponse(cookies=cookies_list, user_agent=user_agent, proxy=proxy, url=driver_url)
     except Exception as e:
+        print(e)
         raise HTTPException(status_code=500, detail=str(e))
 
 
 # Endpoint to get HTML content and cookies
 @app.get("/html")
-async def get_html(url: str, retries: int = 5):
+async def get_html(url: str, proxy: str, user_agent: str, retries: int = 5):
     if not is_safe_url(url):
         raise HTTPException(status_code=400, detail="Invalid URL")
     try:
-        driver = bypass_cloudflare(url, retries, log)
+        driver = bypass_cloudflare(url, proxy, user_agent, retries, log)
         html = driver.html
-        cookies_json = json.dumps(driver.cookies(as_dict=True))
+        cookies_json = json.dumps(driver.cookies(as_dict=False))
 
         response = Response(content=html, media_type="text/html")
         response.headers["cookies"] = cookies_json
