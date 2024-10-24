@@ -47,7 +47,6 @@ def get_chromium_options(browser_path: str, arguments: list, thread_num: int) ->
     options.set_user(user='Profile 10')
     options.add_extension('tampermonkey')
     options.add_extension('NopeCHA')
-    options.add_extension('Edit-This-Cookie')
 
     options.add_extension('BP-Proxy-Switcher-Chrome')
 
