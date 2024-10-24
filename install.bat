@@ -10,7 +10,7 @@ move "%cd%\%SHORTCUT_NAME%" "%DESKTOP_PATH%"
 
 echo Shortcut moved to Desktop.
 
-set "project_dir=..\real_bot"
+set "project_dir=..\real_bot-main"
 set "venv_dir=%project_dir%"
 
 rem Create virtual environment
