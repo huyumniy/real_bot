@@ -153,8 +153,10 @@
       const elementArrive = document.getElementById('lbHeaderP');
 
       let btnQueue = document.getElementById('MainPart_divWarningBox');
-
-      let linkInsideButtonQueue = btnQueue.querySelector('a');
+      let linkInsideButtonQueue = null;
+      if (btnQueue) {
+          linkInsideButtonQueue = btnQueue.querySelector('a');
+      }
 
       if (element) {
         console.log('Елемент знайдено:', element);
