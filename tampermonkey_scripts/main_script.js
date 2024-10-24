@@ -150,31 +150,46 @@
   function findConfirmElementAndSimulateClick() {
     setInterval(() => {
       const element = document.getElementById('buttonConfirmRedirect');
-      const elementArrive = document.getElementById('lbHeaderP');
+      const elementArrive = document.querySelector('#challenge-container');
 
       let btnQueue = document.getElementById('MainPart_divWarningBox');
-      let linkInsideButtonQueue = null;
+        let linkInsideButtonQueue = null;
       if (btnQueue) {
           linkInsideButtonQueue = btnQueue.querySelector('a');
       }
 
-      if (element) {
-        console.log('Елемент знайдено:', element);
 
-        // Емуляція кліку на знайденому елементі
-        element.click();
-        console.log('Емульований клік викликав функцію.');
-      } else if (elementArrive) {
-        // назад у чергу якщо є попередження про відсутність активності більше 10 хвилин
-        window.history.back();
-      } else if (btnQueue) {
-        // Натискання на посилання
+      if (element) {
+          // Натискання на посилання
+          let queueError = _xpath('//*[contains(text(), "Número de cola rechazado") or contains(text(), "Has tardado demasiado en resolver el captcha") or contains(text(), "Queue number rejected") or contains(text(), "Número de cola usado")]')
+          if (queueError) {
+              console.log('DELETED COOKIES')
+              deleteAllCookies()
+          }
         linkInsideButtonQueue.click();
+      } else if (elementArrive) {
+        let continueCaptcha = elementArrive.querySelector('button')
+        continueCaptcha.click()
+      } else if (btnQueue) {
+          console.log('Елемент знайдено:', element);
+
+          // Емуляція кліку на знайденому елементі
+          element.click();
+          console.log('Емульований клік викликав функцію.');
       } else {
         console.log('Елемент не знайдено. Продовжуємо пошук.');
       }
-    }, 90000); // Інтервал у мілісекундах (90 секунд)
+    }, 25000); // Інтервал у мілісекундах (90 секунд)
   }
+
+
+  function deleteAllCookies() {
+    document.cookie.split(';').forEach(cookie => {
+        const eqPos = cookie.indexOf('=');
+        const name = eqPos > -1 ? cookie.substring(0, eqPos) : cookie;
+        document.cookie = name + '=;expires=Thu, 01 Jan 1970 00:00:00 GMT';
+    });
+}
 
   if (!$settings) {
     console.log('Ticket Catcher settings not found!');
