@@ -159,18 +159,19 @@
       }
 
 
-      if (element) {
+      if (btnQueue) {
           // Натискання на посилання
           let queueError = _xpath('//*[contains(text(), "Número de cola rechazado") or contains(text(), "Has tardado demasiado en resolver el captcha") or contains(text(), "Queue number rejected") or contains(text(), "Número de cola usado")]')
           if (queueError) {
               console.log('DELETED COOKIES')
               deleteAllCookies()
           }
-        linkInsideButtonQueue.click();
+
+          if (linkInsideButtonQueue) linkInsideButtonQueue.click();
       } else if (elementArrive) {
         let continueCaptcha = elementArrive.querySelector('button')
         continueCaptcha.click()
-      } else if (btnQueue) {
+      } else if (element) {
           console.log('Елемент знайдено:', element);
 
           // Емуляція кліку на знайденому елементі
