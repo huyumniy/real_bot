@@ -116,7 +116,7 @@ def add_main_script(driver):
             time.sleep(1)
             tabs = driver.get_tabs()
             
-            tabs[0].ele('xpath://*[@id="input_SW5zdGFsbF91bmRlZmluZWQ_bu"] | //*[@id="input_I0FCMD0MjhCTF91bmRlZmluZWQ_bu"]').click()
+            tabs[0].ele('xpath://*[@id="input_SW5zdGFsbF91bmRlZmluZWQ_bu"] | //*[@id="input_I0FCMD0MjhCTF91bmRlZmluZWQ_bu"] | //*[@id="input_EkFCMD0MjhCOF91bmRlZmluZWQ_bu"]').click()
             return True
         except Exception as e:
             print(e)
@@ -340,32 +340,44 @@ def worker(thread_num, initialUrl, serverName, serverPort, isNopeCha, browsersAm
                         elif not captcha_code: break
 
             except Exception as e: print(e)
-            try:
-                bottomLeftText = driver.ele('css:#bottomLeftText')
-                mapNavigator = driver.ele('css:div[id="map-navigator"]')
+            # print('it goes here')
+            # try:
+            #     # Try to find the elements
+            #     bottomLeftText = driver.ele('css:#bottomLeftText')
+            #     print('found text')
+            #     mapNavigator = driver.ele('css:div[id="map-navigator"]')
+            #     print('found map')
+            #     # Extract timer if bottomLeftText is found
+            #     if bottomLeftText:
+            #         print('if bottom')
+            #         timer = extract_time_from_text(bottomLeftText.text)
+            #         print('timer:', timer)
+            #         print('temp_timer', temp_timer)
+            #     else:
+            #         print('else')
+            #         timer = None
+
+            #     # Check for timer difference
+            #     if timer is not None and temp_timer is not None:
+            #         difference = time_difference(temp_timer, timer)
+            #         if abs(difference.total_seconds()) > 1 * 60:
+            #             print("The difference is greater than 1 minute. Initiating page reload")
+            #             driver.refresh()
+            #             temp_timer = timer  # Update temp_timer after refresh
+            #             continue
                 
-                # Extract timer if bottomLeftText is found
-                timer = extract_time_from_text(bottomLeftText.text) if bottomLeftText else None
-                print('timer', timer)
-                if timer is not None and temp_timer is not None:
-                    difference = time_difference(temp_timer, timer)
-                    # Check if the difference is greater than 15 minutes (900 seconds)
-                    if abs(difference.total_seconds()) > 1 * 60:
-                        print("The difference is greater than 15 minutes. Initiating page reload")
-                        driver.refresh()
-                        temp_timer = timer  # Update temp_timer after refresh
-                        continue
+            #     # Handle the case where bottomLeftText is None but mapNavigator exists
+            #     if bottomLeftText is None and mapNavigator is not None:
+            #         print('No timer found, initiating page reload')
+            #         driver.refresh()
+            #         temp_timer = timer
+            #         continue
                 
-                if bottomLeftText is None and mapNavigator is not None:
-                    print('No timer found, initiating page reload')
-                    driver.refresh()
-                    temp_timer = timer
-                    continue
+            #     # Update temp_timer if no condition is met
+            #     temp_timer = timer if timer is not None else temp_timer
                 
-                # Update temp_timer if no condition is met
-                temp_timer = timer if timer is not None else temp_timer
-                
-            except Exception as e: print(e)
+            # except Exception as e: 
+            #     print(e)
             try:
                 minPrice = driver.ele('css:div[id="settingsFormContainer"] > form > input[id="minPrice"]')
                 if minPrice:
