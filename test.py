@@ -177,7 +177,7 @@ def time_difference(time1, time2):
     return t1 - t2
 
 
-def worker(thread_num, initialUrl, serverName, serverPort, isNopeCha, browsersAmount, proxyList):
+def worker(thread_num, initialUrl, serverName, serverPort, isNopeCha, browsersAmount, proxyList, isMadridista, numero, contrasena):
     """
     Worker function to run the code in a separate thread.
     
@@ -303,6 +303,23 @@ def worker(thread_num, initialUrl, serverName, serverPort, isNopeCha, browsersAm
         temp_timer = None
         while True:
             try:
+                if isMadridista:
+                    
+                    madridista_modal = driver.ele('css:.reveal-modal-content')
+                    if madridista_modal:
+                       try: driver.ele('css:body > div.cookie-backdrop > div > div > div > div.text-center.cookie-controls > button:nth-child(2)').click()
+                       except: pass
+                       login = driver.ele('css:#memberUser') 
+                       password = driver.ele('css:#memberPwd')
+                       login.input(numero)
+                       password.input(contrasena)
+                       validate = driver.ele('css:#sale-member-submit')
+                       validate.click()
+                       is_ok = driver.ele('css:#success-member-login')
+                       if is_ok: driver.refresh()
+
+            except: pass
+            try:
                 if isNopeCha == 'integrated':
                     while True:
                         captcha_code = driver.run_js('return document.querySelector("img.captcha-code");')
@@ -384,6 +401,7 @@ def worker(thread_num, initialUrl, serverName, serverPort, isNopeCha, browsersAm
                     maxPrice = driver.ele('css:div[id="settingsFormContainer"] > form > input[id="maxPrice"]')
                     ticketsToBuy = driver.ele('css:div[id="settingsFormContainer"] > form > input[id="ticketsToBuy"]')
                     settingsButton = driver.ele('css:#settingsForm > button')
+                    
                     if len(minPrice.value) == 0 and len(maxPrice.value) == 0 and len(ticketsToBuy.value) == 0:
                         minPrice.input('0')
                         maxPrice.input('9999')
@@ -446,13 +464,16 @@ def worker(thread_num, initialUrl, serverName, serverPort, isNopeCha, browsersAm
         
         
 @eel.expose
-def main(initialUrl, serverName, serverPort, isNopeCha, browsersAmount, proxyList):
-    print(initialUrl, serverName, serverPort, isNopeCha, browsersAmount)
+def main(initialUrl, serverName, serverPort, isNopeCha, browsersAmount, proxyList, isMadridista, numero, contrasena):
+    print(initialUrl, serverName, serverPort, isNopeCha, browsersAmount, isMadridista, numero, contrasena)
+    isMadridista = True
+    numero = 1322240
+    contrasena = 'Vfieymrf1!'
     # eel.spawn(run(initialUrl, isSlack, browserAmount, proxyList))
     threads = []
     for i in range(1, int(browsersAmount)+1):  # Example: 3 threads, modify as needed
         if i!= 1: time.sleep(i*30)
-        thread = threading.Thread(target=worker, args=(i, initialUrl, serverName, serverPort, isNopeCha, browsersAmount, proxyList))
+        thread = threading.Thread(target=worker, args=(i, initialUrl, serverName, serverPort, isNopeCha, browsersAmount, proxyList, isMadridista, numero, contrasena))
         threads.append(thread)
         thread.start()
     # Wait for all threads to complete

@@ -249,3 +249,18 @@ h3 {
     height: 15px;
     width: 15px;
 }
+
+.isMadridista {
+    display: flex;
+    margin: 10px 0;
+}
+
+.isMadridista input {
+    display: flex;
+    width: 15px;
+    border: none;
+    background: rgba(255, 255, 255, .5);
+    border-radius: 10px;
+    font-size: 16px;
+    color: #0F2027;
+}

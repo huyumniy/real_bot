@@ -11,6 +11,7 @@
 </head>
 <body>
     <div class="main">
+        <!-- Existing Inputs -->
         <div class="inputs">
             <h3>Initial Url</h3>
             <input type="text" id="initialUrl" name="initialUrl" placeholder="https://example.com">
@@ -23,12 +24,12 @@
             <h3>Server Name</h3>
             <input type="text" id="serverName" name="serverName" placeholder="S3U1 (Пушкіна)">
         </div>
-
         <div class="inputs">
             <h3>Browsers amount</h3>
             <input type="number" id="browserAmount" name="browserAmount" placeholder="1-9999">
         </div>
 
+        <!-- CAPTCHA Solver -->
         <h3>Оберіть вирішувач капчі:</h3>
         <div class="radio">
             <form id="captchaForm">
@@ -40,10 +41,32 @@
             </form>
         </div>
 
+        <!-- Is Madridista Checkbox -->
+        <div class="isMadridista">
+            <label for="isMadridista">Is Madridista?</label>
+            <input type="checkbox" id="isMadridista" name="isMadridista">
+        </div>
+
+        <!-- Madridista Inputs (Hidden by Default) -->
+        <div id="madridistaInputs" style="display: none;">
+            <h3>Madridista Details</h3>
+            <div class="inputs">
+                <label for="numero">Numero</label>
+                <input type="text" id="numero" name="numero" placeholder="Enter numero">
+            </div>
+            <div class="inputs">
+                <label for="contrasena">Contrasena</label>
+                <input type="password" id="contrasena" name="contrasena" placeholder="Enter contrasena">
+            </div>
+        </div>
+
+        <!-- Proxy Input -->
         <div class="inputs proxy-input">
             <h3>Proxy input:</h3>
             <textarea name="proxyInput" class="textareaNormal" placeholder="ip:port:login:password&#10;ip:port:login:password&#10;ip:port:login:password&#10;"></textarea>
         </div>
+
+        <!-- Start Button -->
         <div class="buttons">
             <div class="start">
               <button id="run" class="active">Start</button>
@@ -53,6 +76,12 @@
 
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
     <script type="text/javascript">
+        // Toggle Madridista inputs based on checkbox
+        document.querySelector('#isMadridista').addEventListener('change', function() {
+            const madridistaInputs = document.querySelector('#madridistaInputs');
+            madridistaInputs.style.display = this.checked ? 'block' : 'none';
+        });
+
         async function start(button) {
             if (button.getAttribute("class") == "active") {
                 button.innerHTML = '';
@@ -63,12 +92,19 @@
                 const serverPort = document.querySelector('#serverPort').value;
                 const serverName = document.querySelector('#serverName').value;
                 const browsersAmount = document.querySelector('#browserAmount').value;
-
-                // Get selected CAPTCHA solver (radio button)
                 const captchaSolver = document.querySelector('input[name="captchaSolver"]:checked').value;
-
-                // Get proxy input or Adspower input based on user's selection
                 const proxyInput = document.querySelector('textarea[name="proxyInput"]').value;
+                
+                // Check if "Is Madridista?" checkbox is checked
+                const isMadridista = document.querySelector('#isMadridista').checked;
+                let numero = '';
+                let contrasena = '';
+
+                // If checked, get the additional input values
+                if (isMadridista) {
+                    numero = document.querySelector('#numero').value;
+                    contrasena = document.querySelector('#contrasena').value;
+                }
 
                 // Log or send data to the backend
                 console.log({
@@ -78,11 +114,14 @@
                     browsersAmount,
                     captchaSolver,
                     proxyInput,
+                    isMadridista,
+                    numero,
+                    contrasena
                 });
 
-                // If needed, trigger Eel backend call
-                await eel.main(initialUrl, serverName, serverPort, captchaSolver, browsersAmount, proxyInput)();
-                
+                // Trigger Eel backend call with new parameters
+                await eel.main(initialUrl, serverName, serverPort, captchaSolver, browsersAmount, proxyInput, isMadridista, numero, contrasena)();
+
                 // Close window after starting
                 closeWindow();
             }
