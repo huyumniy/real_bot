@@ -290,7 +290,7 @@ def worker(thread_num, initialUrl, serverName, serverPort, isNopeCha, browsersAm
             proxy_auto_reload_checkbox.click()
             time.sleep(10)
         if isNopeCha == 'nopecha':
-            captcha_url = 'https://nopecha.com/setup#awscaptcha_auto_open=true|awscaptcha_auto_solve=false|awscaptcha_solve_delay=true|awscaptcha_solve_delay_time=0|disabled_hosts=|enabled=true|funcaptcha_auto_open=true|funcaptcha_auto_solve=false|funcaptcha_solve_delay=true|funcaptcha_solve_delay_time=0|geetest_auto_open=false|geetest_auto_solve=false|geetest_solve_delay=true|geetest_solve_delay_time=1000|hcaptcha_auto_open=true|hcaptcha_auto_solve=false|hcaptcha_solve_delay=true|hcaptcha_solve_delay_time=3000|sub_1QD8apCRwBwvt6pthLg8WQKk|keys=|lemincaptcha_auto_open=false|lemincaptcha_auto_solve=false|lemincaptcha_solve_delay=true|lemincaptcha_solve_delay_time=1000|perimeterx_auto_solve=false|perimeterx_solve_delay=true|perimeterx_solve_delay_time=1000|recaptcha_auto_open=true|recaptcha_auto_solve=false|recaptcha_solve_delay=true|recaptcha_solve_delay_time=1000|recaptcha_solve_method=Image|textcaptcha_auto_solve=true|textcaptcha_image_selector=.captcha-code|textcaptcha_input_selector=#solution|textcaptcha_solve_delay=true|textcaptcha_solve_delay_time=0|turnstile_auto_solve=false|turnstile_solve_delay=false|turnstile_solve_delay_time=1000'
+            captcha_url = 'https://nopecha.com/setup#awscaptcha_auto_open=true|awscaptcha_auto_solve=false|awscaptcha_solve_delay=true|awscaptcha_solve_delay_time=0|disabled_hosts=|enabled=true|funcaptcha_auto_open=true|funcaptcha_auto_solve=false|funcaptcha_solve_delay=true|funcaptcha_solve_delay_time=0|geetest_auto_open=false|geetest_auto_solve=false|geetest_solve_delay=true|geetest_solve_delay_time=1000|hcaptcha_auto_open=true|hcaptcha_auto_solve=false|hcaptcha_solve_delay=true|hcaptcha_solve_delay_time=3000|sub_1QD8apCRwBwvt6pthLg8WQKk|keys=|lemincaptcha_auto_open=false|lemincaptcha_auto_solve=false|lemincaptcha_solve_delay=true|lemincaptcha_solve_delay_time=1000|perimeterx_auto_solve=false|perimeterx_solve_delay=true|perimeterx_solve_delay_time=1000|recaptcha_auto_open=false|recaptcha_auto_solve=false|recaptcha_solve_delay=true|recaptcha_solve_delay_time=1000|recaptcha_solve_method=Image|textcaptcha_auto_solve=true|textcaptcha_image_selector=.captcha-code|textcaptcha_input_selector=#solution|textcaptcha_solve_delay=true|textcaptcha_solve_delay_time=0|turnstile_auto_solve=true|turnstile_solve_delay=true|turnstile_solve_delay_time=30000'
             driver.get("about:blank")
             driver.run_js(f"window.location.href='{captcha_url}'")
             time.sleep(2)
@@ -300,13 +300,13 @@ def worker(thread_num, initialUrl, serverName, serverPort, isNopeCha, browsersAm
         #https://tickets.realmadrid.com/realmadrid_futbol/en_US/entradas/evento/39300/session/2225217/select 
         
         print(Fore.GREEN + f"Thread {thread_num}: Successfully started!\n")
-        temp_timer = None
         while True:
             try:
                 if isMadridista:
                     
                     madridista_modal = driver.ele('css:.reveal-modal-content')
                     if madridista_modal:
+                       time.sleep(3)
                        try: driver.ele('css:body > div.cookie-backdrop > div > div > div > div.text-center.cookie-controls > button:nth-child(2)').click()
                        except: pass
                        login = driver.ele('css:#memberUser') 
@@ -315,7 +315,7 @@ def worker(thread_num, initialUrl, serverName, serverPort, isNopeCha, browsersAm
                        password.input(contrasena)
                        validate = driver.ele('css:#sale-member-submit')
                        validate.click()
-                       is_ok = driver.ele('css:#success-member-login')
+                       is_ok = driver.ele('css:#success-member-login > div')
                        if is_ok: driver.refresh()
 
             except: pass
@@ -358,43 +358,49 @@ def worker(thread_num, initialUrl, serverName, serverPort, isNopeCha, browsersAm
 
             except Exception as e: print(e)
             # print('it goes here')
-            # try:
-            #     # Try to find the elements
-            #     bottomLeftText = driver.ele('css:#bottomLeftText')
-            #     print('found text')
-            #     mapNavigator = driver.ele('css:div[id="map-navigator"]')
-            #     print('found map')
-            #     # Extract timer if bottomLeftText is found
-            #     if bottomLeftText:
-            #         print('if bottom')
-            #         timer = extract_time_from_text(bottomLeftText.text)
-            #         print('timer:', timer)
-            #         print('temp_timer', temp_timer)
-            #     else:
-            #         print('else')
-            #         timer = None
+            # temp_timer = None
+            # while True:
+            #     try:
+            #         # Try to find the elements
+            #         mapNavigator, bottomLeftText = None, None
+            #         try: bottomLeftText = driver.ele('css:#bottomLeftText')
+            #         except: pass
+            #         print('found text')
+            #         try: mapNavigator = driver.ele('css:div[id="map-navigator"]')
+            #         except: pass
+            #         print('found map')
+            #         # Extract timer if bottomLeftText is found
+            #         if bottomLeftText:
+            #             print('if bottom')
+            #             timer = extract_time_from_text(bottomLeftText.text)
+            #             print('timer:', timer)
+            #             print('temp_timer', temp_timer)
+            #         else:
+            #             print('else')
+            #             timer = None
 
-            #     # Check for timer difference
-            #     if timer is not None and temp_timer is not None:
-            #         difference = time_difference(temp_timer, timer)
-            #         if abs(difference.total_seconds()) > 1 * 60:
-            #             print("The difference is greater than 1 minute. Initiating page reload")
+            #         # Check for timer difference
+            #         if timer is not None and temp_timer is not None:
+            #             difference = time_difference(temp_timer, timer)
+            #             if abs(difference.total_seconds()) > 1 * 60:
+            #                 print("The difference is greater than 1 minute. Initiating page reload")
+            #                 driver.refresh()
+            #                 temp_timer = timer  # Update temp_timer after refresh
+            #                 continue
+                    
+            #         # Handle the case where bottomLeftText is None but mapNavigator exists
+            #         if bottomLeftText is None and mapNavigator is not None:
+            #             print('No timer found, initiating page reload')
             #             driver.refresh()
-            #             temp_timer = timer  # Update temp_timer after refresh
+            #             temp_timer = timer
             #             continue
-                
-            #     # Handle the case where bottomLeftText is None but mapNavigator exists
-            #     if bottomLeftText is None and mapNavigator is not None:
-            #         print('No timer found, initiating page reload')
-            #         driver.refresh()
-            #         temp_timer = timer
-            #         continue
-                
-            #     # Update temp_timer if no condition is met
-            #     temp_timer = timer if timer is not None else temp_timer
-                
-            # except Exception as e: 
-            #     print(e)
+                    
+            #         # Update temp_timer if no condition is met
+            #         temp_timer = timer if timer is not None else temp_timer
+                    
+            #     except Exception as e: 
+            #         print(e)
+            #         break
             try:
                 minPrice = driver.ele('css:div[id="settingsFormContainer"] > form > input[id="minPrice"]')
                 if minPrice:
@@ -466,9 +472,6 @@ def worker(thread_num, initialUrl, serverName, serverPort, isNopeCha, browsersAm
 @eel.expose
 def main(initialUrl, serverName, serverPort, isNopeCha, browsersAmount, proxyList, isMadridista, numero, contrasena):
     print(initialUrl, serverName, serverPort, isNopeCha, browsersAmount, isMadridista, numero, contrasena)
-    isMadridista = True
-    numero = 1322240
-    contrasena = 'Vfieymrf1!'
     # eel.spawn(run(initialUrl, isSlack, browserAmount, proxyList))
     threads = []
     for i in range(1, int(browsersAmount)+1):  # Example: 3 threads, modify as needed

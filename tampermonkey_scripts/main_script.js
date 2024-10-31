@@ -195,6 +195,7 @@
   if (!$settings) {
     console.log('Ticket Catcher settings not found!');
     findConfirmElementAndSimulateClick();
+    
     return;
   }
 
@@ -743,6 +744,7 @@
 
       telegramBotId: settings.telegramBotId,
       telegramBotChatId: settings.telegramBotChatId || null,
+      telegramBotChatErrorsId: settings.telegramBotChatErrorsId || null,
       production: settings.production || false,
       debug: settings.debug === undefined ? true : settings.debug,
       reload: settings.reload === undefined ? false : settings.reload,
@@ -855,12 +857,39 @@ getcookie func
   //  Send notification to Telegram Bot
 
   function _notify(message, debugOnly = false) {
-    const serverUrl = 'http://localhost:3309/sendTelegramMessage';
+    const serverUrl = 'http://localhost:3340/sendTelegramMessage';
 
     const data = {
       message: message,
       telegramBotToken: $settings.telegramBotId,
       chatId: $settings.telegramBotChatId,
+      botName: '<RealBot>',
+      chromeProfile: $settings.chromeProfile,
+    };
+
+    fetch(serverUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    })
+      .then((response) => response.json())
+      .then((data) => {
+        console.log('Server response:', data);
+      })
+      .catch((error) => {
+        console.error('Error:', error);
+      });
+  }
+
+  function _notify_error(message, debugOnly = false) {
+    const serverUrl = 'http://localhost:3340/sendTelegramMessage';
+
+    const data = {
+      message: message,
+      telegramBotToken: $settings.telegramBotId,
+      chatId: $settings.telegramBotChatErrorsId,
       botName: '<RealBot>',
       chromeProfile: $settings.chromeProfile,
     };
@@ -925,7 +954,7 @@ getcookie func
    //  Send notification to Slack Bot
 
   function _notify(data) {
-    const url = 'http://localhost:3309/book';
+    const url = 'http://localhost:3340/book';
     const xhr = new XMLHttpRequest();
     xhr.open('POST', url, true);
     xhr.setRequestHeader('Content-type', 'application/json');
@@ -1225,7 +1254,7 @@ getcookie func
         let url = window.location.href
         console.log(userAgent)
         
-        let api_url = `http://localhost:3309/cookies?url=${url}&proxy=${proxyInput}&user_agent=${userAgent}`
+        let api_url = `http://localhost:3340/cookies?url=${url}&proxy=${proxyInput}&user_agent=${userAgent}`
         fetch((encodeURI(api_url)), {
           method: 'GET',
           })
@@ -1252,7 +1281,7 @@ function notFoundHandler() {
     const interval = setInterval(() => {
       if (_xpath("//*[contains(text(), '404 Not Found')]", window.document).length > 0 && attempt < 1) {
         attempt += 1;
-        
+        _notify_error("З'явилась помилка 404, потрібно змінити проксі або оновити сторінку")
         setTimeout(() => {
           window.location.reload();
         }, 45000);
@@ -1267,9 +1296,9 @@ function notFoundHandler() {
 function banHandler() {
     let attempt = 0;
     const interval = setInterval(() => {
-      if (_xpath("//*[contains(text(), 'Sorry, you have been blocked')]", window.document).length > 0 && attempt < 1) {
+      if ((_xpath("//*[contains(text(), 'Sorry, you have been blocked')]", window.document).length > 0) && attempt < 1) {
         attempt += 1;
-
+        _notify_error("Браузер забанений, потрібно змінити проксі або оновити сторінку (403)")
         setTimeout(() => {
           window.location.href = $settings.url;
         }, 45000);

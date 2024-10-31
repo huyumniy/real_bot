@@ -19,6 +19,7 @@ let settings = storedSettings || {
   allowSeparateTickets: false,
   telegramBotId: '5712671465:AAFqebxudxqEcGp2SZm814vR8RtTKLgEjGs',
   telegramBotChatId: -1001961554005,
+  telegramBotChatErrorsId: -4572872479,
   production: true,
   debug: false,
   reload: true,
@@ -101,6 +102,7 @@ function updateSettings() {
   settings.allowSeparateTickets = false;
   settings.telegramBotId = '5712671465:AAFqebxudxqEcGp2SZm814vR8RtTKLgEjGs';
   settings.telegramBotChatId = -1001961554005;
+  settings.telegramBotChatErrorsId = -4572872479;
   settings.production = true;
   settings.debug = false;
   settings.reload = true;
