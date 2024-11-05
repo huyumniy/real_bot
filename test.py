@@ -218,7 +218,7 @@ def worker(thread_num, initialUrl, serverName, serverPort, isNopeCha, browsersAm
         script_raw = read_tampermonkey_script(path_to_script)
         path_to_main_script = f'main_script.js'
         script_main_raw = read_tampermonkey_script(path_to_main_script)
-        script = re.sub(r'(?<=localhost:)\d+', str(serverPort), script_main_raw)
+        script = re.sub(r'(?<=localhost:)(\d+)?(?=/)', str(serverPort), script_main_raw)
 
 
         path_to_main_script = os.path.join(os.getcwd(), 'tampermonkey_scripts', 'main_script.js')
