@@ -320,7 +320,7 @@
               console.log('---- Check ' + sectorData[0].sector + ' ----');
               nearestSets =
                 $settings.ticketsToBuy > 1 && !$settings.allowSeparateTickets
-                  ? _getNearestSeats(sectorData, $settings.ticketsToBuy)
+                  ? _getNearestSeats(sectorData, $settings.ticketsToBuy).slice(0, 4)
                   : sectorData;
               if (nearestSets.length >= $settings.ticketsToBuy) {
                 //console.log(nearestSets);
