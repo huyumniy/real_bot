@@ -358,10 +358,10 @@
                 if (sectorData && sectorData[0] && sectorData[0].sector) {
                   //console.log('---- Check ' + sectorData[0].sector + ' ----');
                   nearestSets =
-                    $settings.ticketsToBuy > 1 &&
-                    !$settings.allowSeparateTickets
-                      ? _getNearestSeats(sectorData, $settings.ticketsToBuy)
+                    $settings.ticketsToBuy > 1 && !$settings.allowSeparateTickets
+                      ? _getNearestSeats(sectorData, $settings.ticketsToBuy).slice(0, 4)
                       : sectorData;
+                  
                   if (nearestSets.length >= $settings.ticketsToBuy) {
                     //console.log(nearestSets);
                     nearestSets.map((seat) => {
@@ -1284,7 +1284,7 @@ function notFoundHandler() {
         _notify_error("З'явилась помилка 404, потрібно змінити проксі або оновити сторінку")
         setTimeout(() => {
           window.location.reload();
-        }, 45000);
+        }, 600000);
         
         clearInterval(interval);
       }
@@ -1301,7 +1301,7 @@ function banHandler() {
         _notify_error("Браузер забанений, потрібно змінити проксі або оновити сторінку (403)")
         setTimeout(() => {
           window.location.href = $settings.url;
-        }, 45000);
+        }, 600000);
 
         clearInterval(interval);
       }
