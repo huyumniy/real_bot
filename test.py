@@ -1,7 +1,8 @@
 import time
 import logging
-import sys, os
+import sys, os, platform
 import re
+import requests
 from colorama import init, Fore
 import threading
 from CloudflareBypasser import CloudflareBypasser
@@ -40,15 +41,25 @@ def get_chromium_options(browser_path: str, arguments: list, thread_num: int) ->
     :param thread_num: Thread number to assign a unique extension and profile.
     :return: Configured ChromiumOptions instance.
     """
+    
     options = ChromiumOptions()
     options.set_paths(browser_path=browser_path)
-
+    # print(host, port)
     options.auto_port()
+    # options.set_address=host
+    # options.set_local_port=port
     options.set_user(user='Profile 10')
-    options.add_extension('tampermonkey')
-    options.add_extension('NopeCHA')
+    # options.add_extension('NopeCHA')
+    nopecha_path = os.getcwd() + '/tampermonkey'
+    extension_path = os.getcwd() + '/BP-Proxy-Switcher-Chrome'
+    command = f"-load-extension={extension_path},{nopecha_path}"
+    
+    
+    if os.name == 'posix' and platform.system() == 'Darwin': vpn_extension_path = os.getcwd() + "/vpn"
+    elif os.name == 'nt': vpn_extension_path = os.getcwd() + "\\vpn"
+    command += f',{vpn_extension_path}'
 
-    options.add_extension('BP-Proxy-Switcher-Chrome')
+    options.set_argument(command)
 
 
     
@@ -79,44 +90,20 @@ def get_chromium_options(browser_path: str, arguments: list, thread_num: int) ->
     # logging.info(f"Thread {thread_num}: Chromium options configured with user data path {user_data_path}.")
     return options
 
-
-def add_tampermonkey_script(driver, script_text):
-    while True:
-        try:
-            driver.get('chrome-extension://dhdgffkkebhmkfjojejmpbldmpobfkfo/options.html#nav=new-user-script+editor')
-           
-            selection = driver.ele('css:#label_bmV3LXVzZXItc2NyaXB0X3NlbGVjdGlvbg_editormenulabel_id')
-            selection.click()
-            time.sleep(1)
-            tr = driver.ele('css:table>#tr_bmV3LXVzZXItc2NyaXB0X3NlbGVjdGlvbl9zZWxlY3RTY29wZQ_editorsubmenuentry_tr')
-            tr.click()
-            text_input = driver.ele('xpath://*[@id="div_bmV3LXVzZXItc2NyaXB0X2VkaXQ"]/div/div/div[6]/div[1]/div')
-            driver.actions.key_down(Keys.DEL)
-            text_input.input(script_text)
-            time.sleep(1)
-            file_selection = driver.ele('css:#label_bmV3LXVzZXItc2NyaXB0X2ZpbGU_editormenulabel_id')
-            file_selection.click()
-            time.sleep(1)
-            save_button = driver.ele('css:#td_bmV3LXVzZXItc2NyaXB0X2VkaXRvcnN1Ym1lbnVlbnRyeV90ZF9sZmlsZV9zYXZl')
-            save_button.click()
-            return True
-        except Exception as e:
-            print(e)
-            return False
  
  
-def add_main_script(driver):
+def add_script(driver, tampermonkey_id, script):
     while True:
         try:
-            driver.get('chrome-extension://dhdgffkkebhmkfjojejmpbldmpobfkfo/options.html#nav=utils')
+            driver.get(f'chrome-extension://{tampermonkey_id}/options.html#nav=utils')
            
             current_dir = os.getcwd()
-            necessary_path = current_dir + '/tampermonkey_scripts/main_script.js'
+            necessary_path = current_dir + f'/tampermonkey_scripts/{script}'
             driver.ele('xpath://*[@id="input_ZmlsZV91dGlscw_file"]').input(necessary_path)
             time.sleep(1)
             tabs = driver.get_tabs()
             
-            tabs[0].ele('xpath://*[@id="input_SW5zdGFsbF91bmRlZmluZWQ_bu"] | //*[@id="input_I0FCMD0MjhCTF91bmRlZmluZWQ_bu"] | //*[@id="input_EkFCMD0MjhCOF91bmRlZmluZWQ_bu"]').click()
+            tabs[0].ele('css:div[class="ask_action_buttons"] > input:nth-child(1)').click()
             return True
         except Exception as e:
             print(e)
@@ -177,14 +164,66 @@ def time_difference(time1, time2):
     return t1 - t2
 
 
-def worker(thread_num, initialUrl, serverName, serverPort, isNopeCha, browsersAmount, proxyList, isMadridista, numero, contrasena):
+def connect_vpn(driver):
+    blacklist = ['Iran', 'Egypt', 'Italy']
+    while True:
+        try:
+            driver.get('chrome://extensions/')
+            script_array = """
+            return new Promise((resolve) => {
+                chrome.management.getAll((extensions) => {
+                    resolve(extensions); // Resolve with the full extensions array
+                });
+            });
+            """
+
+            # Execute the JavaScript and get the result
+            extensions = driver.run_js(script_array)
+            vpn_id = [extension['id'] for extension in extensions if "Urban VPN Proxy" in extension['name']]
+            vpn_url = f'chrome-extension://{vpn_id[0]}/popup/index.html'
+
+            driver.get(vpn_url)
+            time.sleep(3)
+            try: driver.ele('css:button[class="button button--pink consent-text-controls__action"]').click()
+            except: pass
+            try: driver.ele('css:#app > div > div.simple-layout > div.simple-layout__body > div > div > button').click()
+            except: pass
+            is_connected = None
+            try: is_connected = driver.ele('css:div[class="play-button play-button--pause"]')
+            except: pass
+            if is_connected: 
+                try: driver.ele('css:div[class="play-button play-button--pause"]').click()
+                except: pass
+            select_element = driver.ele('css:div[class="select-location"]')
+            select_element.click()
+            time.sleep(2)
+            while True:
+                element = random.choice((driver.eles('xpath://ul[@class="locations"][2]/li/p')))
+                element_text = element.text
+                if element_text not in blacklist: break
+            driver.run_js("arguments[0].scrollIntoView();", element)
+            
+            element.click()
+            time.sleep(5)
+            break
+        except Exception as e: 
+            print(e) 
+            time.sleep(5)
+    return True
+
+
+
+def worker(thread_num, initialUrl, serverName, serverPort, isNopeCha, browsersAmount, proxyList, isMadridista, numero, contrasena, isVpn, adspower_api=None, adspower_id=None):
+    print(thread_num, type(thread_num))
     """
     Worker function to run the code in a separate thread.
     
     :param thread_num: Thread number for assigning unique browser profile and extensions.
     """
-    logging.info(f'Thread {thread_num} started.')
-    time.sleep(thread_num)
+    if not adspower_api:
+        logging.info(f'Thread {thread_num} started.')
+    else:
+        logging.info(f'Browser {adspower_id} started')
     # Chromium Browser Path
     browser_path = os.getenv('CHROME_PATH', "/usr/bin/google-chrome")
     
@@ -204,61 +243,89 @@ def worker(thread_num, initialUrl, serverName, serverPort, isNopeCha, browsersAm
         "-disable-gpu",
         "-accept-lang=en-US",
     ]
+    host, port = None, None
+    if adspower_api:
+        adspower_link = f"{adspower_api}/api/v1/browser/start?serial_number={adspower_id}"
+        print(adspower_link)
 
-    options = get_chromium_options(browser_path, arguments, thread_num)
-
+        adspower_link = adspower_link
+        if adspower_link:
+            resp = requests.get(adspower_link).json()
+            if resp["code"] != 0:
+                print(resp["msg"])
+                print("please check ads_id")
+                sys.exit()
+            host, port = resp['data']['ws']['selenium'].split(':')
+    if not host and not port: options = get_chromium_options(browser_path, arguments, thread_num)
     # Initialize the browser
-    driver = ChromiumPage(addr_or_opts=options)
+    if adspower_api: driver = ChromiumPage(addr_or_opts=host+":"+port)
+    else: driver = ChromiumPage(addr_or_opts=options)
+    time.sleep(5)
+    if not adspower_api:
+        while True:
+            time.sleep(1)
+            tabs = driver.get_tabs()
+            if len(tabs) > 1:
+                driver.close_tabs(tabs_or_ids=tabs[1:], others=True)
+            else: break
+
     try:
-        time.sleep(5)
-        tabs = driver.get_tabs()
-        if len(tabs) > 1:
-            driver.close_tabs(tabs_or_ids=tabs[1:], others=True)
+        driver.get('chrome://extensions/')
+        time.sleep(1)
+    
+        # Example script to retrieve extensions
+        script_array = """
+        return new Promise((resolve) => {
+            chrome.management.getAll((extensions) => {
+                resolve(extensions); // Resolve with the full extensions array
+            });
+        });
+        """
+
+        # Execute the JavaScript and get the result
+        extensions = driver.run_js(script_array)
+        
+        tampermonkey_id = [extension['id'] for extension in extensions if "Tampermonkey" in extension['name']]
+
         path_to_script = f'script_settings.js'
         script_raw = read_tampermonkey_script(path_to_script)
         path_to_main_script = f'main_script.js'
         script_main_raw = read_tampermonkey_script(path_to_main_script)
-        script = re.sub(r'(?<=localhost:)\d+', str(serverPort), script_main_raw)
+        script = re.sub(r'(?<=localhost:)(\d+)?(?=/)', str(serverPort), script_main_raw)
 
 
         path_to_main_script = os.path.join(os.getcwd(), 'tampermonkey_scripts', 'main_script.js')
+        path_to_settings_script = os.path.join(os.getcwd(), 'tampermonkey_scripts', 'script_settings.js')
         script_dir = os.getcwd() + '\\tampermonkey_scripts'
         save_tampermonkey_script(path_to_main_script, script)
-
-        new_chrome_profile = f"{serverName}_{thread_num}"
+        new_chrome_profile = None
+        if not adspower_api: new_chrome_profile = f"{serverName}_{thread_num}"
+        else: new_chrome_profile = f"{serverName}"
+        print(new_chrome_profile)
         # Use regex to replace the chromeProfile value in the JS string
         script = re.sub(
-           r"(chromeProfile:\s*')[^']*(')",
-           rf"\1{new_chrome_profile}\2",
-           script_raw
+            r"chromeProfile:\s*'(.*?)'",  # Matches "chromeProfile: 'value'"
+            f"chromeProfile: '{new_chrome_profile}'",  # Replace with new profile
+            script_raw
         )
+
+        # Replace `chromeProfile` in the assignment
         script = re.sub(
-           r"(settings.chromeProfile =\s*')[^']*(')",
-           rf"\1{new_chrome_profile}\2",
-           script_raw
+            r"settings\.chromeProfile\s*=\s*'(.*?)'",  # Matches "settings.chromeProfile = 'value'"
+            f"settings.chromeProfile = '{new_chrome_profile}'",  # Replace with new profile
+            script
         )
-        
-        add_tampermonkey_script(driver, script)
+        save_tampermonkey_script(path_to_settings_script, script)
+        print(tampermonkey_id)
+        print('add tampermonkey_script')
         time.sleep(2)
-        add_main_script(driver)
+        add_script(driver, tampermonkey_id[0], 'main_script.js')
+        add_script(driver, tampermonkey_id[0], 'script_settings.js')
 
         if proxyList:
             time.sleep(5)
             #proxy configuration
-            driver.get('chrome://extensions/')
-            time.sleep(1)
-        
-            # Example script to retrieve extensions
-            script_array = """
-            return new Promise((resolve) => {
-                chrome.management.getAll((extensions) => {
-                    resolve(extensions); // Resolve with the full extensions array
-                });
-            });
-            """
-
-            # Execute the JavaScript and get the result
-            extensions = driver.run_js(script_array)
+            
             filtered_extensions = [extension for extension in extensions if "BP Proxy Switcher" in extension['name']]
             
             proxy_id = [extension['id'] for extension in filtered_extensions if 'id' in extension][0]
@@ -289,6 +356,8 @@ def worker(thread_num, initialUrl, serverName, serverPort, isNopeCha, browsersAm
             proxy_auto_reload_checkbox = driver.ele('xpath://*[@id="autoReload"]')
             proxy_auto_reload_checkbox.click()
             time.sleep(10)
+        if isVpn:
+            connect_vpn(driver)
         if isNopeCha == 'nopecha':
             captcha_url = 'https://nopecha.com/setup#awscaptcha_auto_open=true|awscaptcha_auto_solve=false|awscaptcha_solve_delay=true|awscaptcha_solve_delay_time=0|disabled_hosts=|enabled=true|funcaptcha_auto_open=true|funcaptcha_auto_solve=false|funcaptcha_solve_delay=true|funcaptcha_solve_delay_time=0|geetest_auto_open=false|geetest_auto_solve=false|geetest_solve_delay=true|geetest_solve_delay_time=1000|hcaptcha_auto_open=true|hcaptcha_auto_solve=false|hcaptcha_solve_delay=true|hcaptcha_solve_delay_time=3000|sub_1QD8apCRwBwvt6pthLg8WQKk|keys=|lemincaptcha_auto_open=false|lemincaptcha_auto_solve=false|lemincaptcha_solve_delay=true|lemincaptcha_solve_delay_time=1000|perimeterx_auto_solve=false|perimeterx_solve_delay=true|perimeterx_solve_delay_time=1000|recaptcha_auto_open=false|recaptcha_auto_solve=false|recaptcha_solve_delay=true|recaptcha_solve_delay_time=1000|recaptcha_solve_method=Image|textcaptcha_auto_solve=true|textcaptcha_image_selector=.captcha-code|textcaptcha_input_selector=#solution|textcaptcha_solve_delay=true|textcaptcha_solve_delay_time=0|turnstile_auto_solve=true|turnstile_solve_delay=true|turnstile_solve_delay_time=30000'
             driver.get("about:blank")
@@ -470,18 +539,32 @@ def worker(thread_num, initialUrl, serverName, serverPort, isNopeCha, browsersAm
         
         
 @eel.expose
-def main(initialUrl, serverName, serverPort, isNopeCha, browsersAmount, proxyList, isMadridista, numero, contrasena):
-    print(initialUrl, serverName, serverPort, isNopeCha, browsersAmount, isMadridista, numero, contrasena)
+def main(initialUrl, serverName, serverPort, isNopeCha, browsersAmount, proxyList, isMadridista, numero, contrasena, isVpn, adspower_api=None, adspower_ids=[]):
+    print(initialUrl, serverName, serverPort, isNopeCha, browsersAmount, isMadridista, numero, contrasena, isVpn)
     # eel.spawn(run(initialUrl, isSlack, browserAmount, proxyList))
-    threads = []
-    for i in range(1, int(browsersAmount)+1):  # Example: 3 threads, modify as needed
-        if i!= 1: time.sleep(i*30)
-        thread = threading.Thread(target=worker, args=(i, initialUrl, serverName, serverPort, isNopeCha, browsersAmount, proxyList, isMadridista, numero, contrasena))
-        threads.append(thread)
-        thread.start()
-    # Wait for all threads to complete
-    for thread in threads:
-        thread.join()
+   
+    adspower_ids = [line.strip() for line in adspower_ids.strip().splitlines() if line.strip()]
+    
+    if not adspower_api and not adspower_ids:
+        threads = []
+        for i in range(1, int(browsersAmount)+1):  # Example: 3 threads, modify as needed
+            # if i!= 1: time.sleep(i*30)
+            thread = threading.Thread(target=worker, args=(i, initialUrl, serverName, serverPort, isNopeCha, browsersAmount, proxyList, isMadridista, numero, contrasena, isVpn))
+            threads.append(thread)
+            thread.start()
+        # Wait for all threads to complete
+        for thread in threads:
+            thread.join()
+    else:
+        threads = []
+        for i, adspower_id in enumerate(adspower_ids):
+            if i+1!=1: time.sleep(i+1*30)
+            thread = threading.Thread(target=worker, args=(i+1, initialUrl, adspower_id, serverPort, isNopeCha, browsersAmount, proxyList, isMadridista, numero, contrasena, isVpn, adspower_api, adspower_id))
+            threads.append(thread)
+            thread.start()
+
+        for thread in threads:
+            thread.join()
 
 
 def is_port_open(host, port):
@@ -497,13 +580,14 @@ def is_port_open(host, port):
 
 
 if __name__ == "__main__":
+    
     eel.init('web')
     
     port = 8001
     while True:
         try:
             if not is_port_open('localhost', port):
-                eel.start('main.html', size=(600, 800), port=port)
+                eel.start('main.html', size=(600, 900), port=port)
                 break
             else:
                 port += 1

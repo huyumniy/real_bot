@@ -117,6 +117,18 @@ input {
     width: 25px;
 }
 
+.absolute-checkbox {
+    display: flex;
+    position: absolute;
+    top: 0;
+    right: 0;
+}
+
+.absolute-checkbox input {
+    height: 15px;
+    width: 15px;
+}
+
 .checkbox {
     display: flex;
     padding: 10px 0px;

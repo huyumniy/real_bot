@@ -13,7 +13,7 @@
 const storedSettings = JSON.parse(localStorage.getItem('ticketBotSettings'));
 
 let settings = storedSettings || {
-  chromeProfile: 'S3U2_U1',
+  chromeProfile: '9454',
   indexUrl: 'https://www.realmadrid.com/en/tickets',
   url: getSessionUrl(),
   allowSeparateTickets: false,
@@ -93,7 +93,7 @@ function updateSettings() {
   settings.minPrice = minPrice !== '' ? minPrice : null;
   settings.maxPrice = maxPrice !== '' ? maxPrice : null;
   settings.ticketsToBuy = ticketsToBuy !== '' ? ticketsToBuy : null;
-  settings.chromeProfile = 'S3U9_U20';
+  settings.chromeProfile = '9454';
   settings.indexUrl = 'https://www.realmadrid.com/en/tickets';
 
   // Dynamically get the session URL when the button is clicked
