@@ -669,35 +669,6 @@
     return resp.linkList;
   }
 
-  function getSubTribune(session, tribuneObj) {
-    var resp = _requestAjaxData(
-      'https://tickets.realmadrid.com/api/v1/venues/' +
-        session.id +
-        '?viewCode=' +
-        tribuneObj.target
-    );
-    return resp
-      .filter((item) => {
-        let condition = item.availability >= $settings.ticketsToBuy;
-        return condition;
-      })
-      .filter((item) => {
-        return $settings.maxPrice === null
-          ? true
-          : item.priceMax <= $settings.maxPrice;
-      })
-      .filter((item) => {
-        return $settings.minPrice === null
-          ? true
-          : item.priceMin >= $settings.minPrice;
-      })
-      .sort((a, b) => {
-        if (a.availability > b.availability) {
-          return -1;
-        }
-      });
-  }
-
   function _requestAjaxData(url, post) {
 
 
