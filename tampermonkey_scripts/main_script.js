@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         Proticketing Real Madrid Ticket Catcher v2.2.1_Autofill
+// @name         Proticketing Real Madrid Ticket Catcher v2.2.1_a
 // @namespace    https://www.realmadrid.com/
-// @version      2.2.1_Server_Autofill
+// @version      2.2.1.a_Server
 // @description  try to take over the world!
 // @author       Megazoid
 // @match        *://*.realmadrid.com/*
@@ -15,7 +15,6 @@
 // @grant        GM_getValue
 // @grant        GM_setValue
 // @grant        GM.info
-// @grant        GM_registerMenuCommand
 // @grant        GM_openInTab
 // @grant        GM_xmlhttpRequest
 // @grant        GM_log
@@ -24,13 +23,14 @@
 // ==/UserScript==
 
 (function () {
-  ('use strict');
+  'use strict';
 
   let open = window.XMLHttpRequest.prototype.open;
   let send = window.XMLHttpRequest.prototype.send;
   let setHeader = window.XMLHttpRequest.prototype.setRequestHeader;
   let headerRequests = {};
   let obSignature = {};
+  let obSignatureTemp = {};
   let $settings = _getSettings();
 
   window.XMLHttpRequest.prototype.open = function (
@@ -73,13 +73,15 @@
   function handleRequestError(status, statusText) {
     console.error(`Request failed with status ${status}: ${statusText}`);
     if (status === 403 || status === 401) {
-      window.location.reload(); // Перенаправлення на URL для відновлення сесії
+      setTimeout(() => {
+        window.location.reload(); // Або виклик функції для повторного запиту
+      }, 30000); // Перенаправлення на URL для відновлення сесії
     } else {
       // Обробка інших помилок мережі
       // Наприклад, повторний запит через певний час
       setTimeout(() => {
         window.location.reload(); // Або виклик функції для повторного запиту
-      }, 5000);
+      }, 35000);
     }
   }
 
@@ -109,9 +111,13 @@
     if (headerRequests && !headerRequests[this._url]) {
       headerRequests[this._url] = {};
     }
-
     if (
-      this._url.match(/\/api\/v1\/venues\/\d+\?viewCode/) &&
+      ['ob-timestamp', 'ob-signature-token', 'ob-app-trace-id'].includes(header)
+    ) {
+      obSignatureTemp[header] = value;
+    }
+    if (
+      this._url.match(/\/api\/v1\/venues\/\d+\/?viewCode/) &&
       ['ob-timestamp', 'ob-signature-token', 'ob-app-trace-id'].includes(header)
     ) {
       obSignature[header] = value;
@@ -140,6 +146,16 @@
     this.headers[header].push(value);
   }
 
+  function _captcha() {
+    return window.location.href.includes('oneboxtm.queue-it.net');
+  }
+
+  function iframeRef(frameRef) {
+    return frameRef.contentWindow
+      ? frameRef.contentWindow.document
+      : frameRef.contentDocument;
+  }
+
   window.XMLHttpRequest.prototype.open = openReplacement;
   window.XMLHttpRequest.prototype.send = sendReplacement;
   window.XMLHttpRequest.prototype.setRequestHeader = setRequestHeader;
@@ -150,52 +166,64 @@
   function findConfirmElementAndSimulateClick() {
     setInterval(() => {
       const element = document.getElementById('buttonConfirmRedirect');
-      const elementArrive = document.querySelector('#challenge-container');
+      const elementArrive = document.getElementById('lbHeaderP');
 
       let btnQueue = document.getElementById('MainPart_divWarningBox');
-        let linkInsideButtonQueue = null;
-      if (btnQueue) {
-          linkInsideButtonQueue = btnQueue.querySelector('a');
-      }
 
+      let linkInsideButtonQueue = btnQueue.querySelector('a');
 
-      if (btnQueue) {
-          // Натискання на посилання
-          let queueError = _xpath('//*[contains(text(), "Número de cola rechazado") or contains(text(), "Has tardado demasiado en resolver el captcha") or contains(text(), "Queue number rejected") or contains(text(), "Número de cola usado")]')
-          if (queueError) {
-              console.log('DELETED COOKIES')
-              deleteAllCookies()
-          }
+      if (element) {
+        console.log('Елемент знайдено:', element);
 
-          if (linkInsideButtonQueue) linkInsideButtonQueue.click();
+        // Емуляція кліку на знайденому елементі
+        element.click();
+        console.log('Емульований клік викликав функцію.');
       } else if (elementArrive) {
-        let continueCaptcha = elementArrive.querySelector('button')
-        continueCaptcha.click()
-      } else if (element) {
-          console.log('Елемент знайдено:', element);
-
-          // Емуляція кліку на знайденому елементі
-          element.click();
-          console.log('Емульований клік викликав функцію.');
+        // назад у чергу якщо є попередження про відсутність активності більше 10 хвилин
+        window.history.back();
+      } else if (btnQueue) {
+        // Натискання на посилання
+        linkInsideButtonQueue.click();
       } else {
         console.log('Елемент не знайдено. Продовжуємо пошук.');
       }
-    }, 25000); // Інтервал у мілісекундах (90 секунд)
+    }, 90000); // Інтервал у мілісекундах (90 секунд)
   }
 
+  if (_captcha()) {
+    setTimeout(() => {
+      let button = document.querySelector('#challenge-container > button');
+      console.log(button);
+      if (button) {
+        button.click();
+        setTimeout(() => {
+          location.reload();
+        }, 10000);
+      }
+    }, 5000);
+  }
 
-  function deleteAllCookies() {
-    document.cookie.split(';').forEach(cookie => {
-        const eqPos = cookie.indexOf('=');
-        const name = eqPos > -1 ? cookie.substring(0, eqPos) : cookie;
-        document.cookie = name + '=;expires=Thu, 01 Jan 1970 00:00:00 GMT';
-    });
-}
+  // setTimeout(() => {
+  //   let cloudflare = document.querySelector('a[href="https://www.cloudflare.com?utm_source=challenge&utm_campaign=l"]')
+  //   if (cloudflare) {
+  //     console.log(cloudflare)
+  //     const element = document.querySelector('#RlquG0 > div > div > div');
+  //     console.log(element)
+  //     const iframe = element.shadowRoot;
+  //     console.log(iframe)
+
+  //     const rect = element.getBoundingClientRect();
+  //     console.log(rect)
+  //     const x = rect.left; // X coordinate relative to the viewport
+  //     const y = rect.top;  // Y coordinate relative to the viewport
+
+  //     simulate(element, "click", { pointerX: x, pointerY: y })
+  //   }
+  // }, 5000)
 
   if (!$settings) {
     console.log('Ticket Catcher settings not found!');
     findConfirmElementAndSimulateClick();
-    
     return;
   }
 
@@ -207,7 +235,6 @@
   document.title = $settings.chromeProfile + ' - ' + document.title;
 
   // INITIALIZATION
-
   _countScriptRunning();
 
   unsafeWindow.document.arrive(
@@ -346,40 +373,90 @@
           });
         }
         getTribunes(sessionInfo).map((tribune) => {
+          console.log("===========================TRIBUNE=================",tribune)
           if (!scriptFinish) {
+            
             console.log('=========== ' + tribune.viewName + ' =============');
             let tribuneData = getTribuneData(sessionInfo, tribune);
+            console.log('GET TRIBUNE DATA', tribuneData)
             tribuneData.map((tribuneDataObj) => {
               if (!scriptFinish) {
-                let sectorData = getSectorData(
-                  sessionInfo,
-                  tribuneDataObj.target
-                );
-                if (sectorData && sectorData[0] && sectorData[0].sector) {
-                  //console.log('---- Check ' + sectorData[0].sector + ' ----');
-                  nearestSets =
-                    $settings.ticketsToBuy > 1 &&
-                    !$settings.allowSeparateTickets
-                      ? _getNearestSeats(sectorData, $settings.ticketsToBuy)
-                      : sectorData;
-                  if (nearestSets.length >= $settings.ticketsToBuy) {
-                    //console.log(nearestSets);
-                    nearestSets.map((seat) => {
-                      if (reserveTickets(sessionInfo, seat)) {
-                        seatSector = seat.sector;
-                        selection +=
-                          '\n' +
-                          seat.sector +
-                          ' Row: ' +
-                          seat.row.trim() +
-                          ' Seat: ' +
-                          seat.column +
-                          ' €' +
-                          seat.basePrice;
+                let subTribunes = []
+                if (tribuneDataObj.aggregatedView) {
+                  subTribunes = getTribuneData(sessionInfo, tribuneDataObj)
+                }
+                console.log('SUBTRIBUNES', subTribunes)
+                subTribunes.map((subTribune) => {
+                  let sectorData = getSectorData(
+                    sessionInfo,
+                    subTribune.target
+                  );
+                  
+  
+                  console.log("SECTOR DATA", sectorData)
+                  if (sectorData && sectorData[0] && sectorData[0].sector) {
+                    //console.log('---- Check ' + sectorData[0].sector + ' ----');
+                    nearestSets =
+                      $settings.ticketsToBuy > 1 &&
+                      !$settings.allowSeparateTickets
+                        ? _getNearestSeats(sectorData, $settings.ticketsToBuy)
+                        : sectorData;
+                    if (nearestSets.length >= $settings.ticketsToBuy) {
+                      //console.log(nearestSets);
+                      nearestSets.map((seat) => {
+                        if (reserveTickets(sessionInfo, seat)) {
+                          seatSector = seat.sector;
+                          selection +=
+                            '\n' +
+                            seat.sector +
+                            ' Row: ' +
+                            seat.row.trim() +
+                            ' Seat: ' +
+                            seat.column +
+                            ' €' +
+                            seat.basePrice;
+                        }
+                      });
+                      if (selection) {
+                        scriptFinish = true;
                       }
-                    });
-                    if (selection) {
-                      scriptFinish = true;
+                    }
+                  }
+                })
+                if (subTribunes.length == 0) {
+                  let sectorData = getSectorData(
+                    sessionInfo,
+                    tribuneDataObj.target
+                  );
+                  
+  
+                  console.log("SECTOR DATA", sectorData)
+                  if (sectorData && sectorData[0] && sectorData[0].sector) {
+                    //console.log('---- Check ' + sectorData[0].sector + ' ----');
+                    nearestSets =
+                      $settings.ticketsToBuy > 1 &&
+                      !$settings.allowSeparateTickets
+                        ? _getNearestSeats(sectorData, $settings.ticketsToBuy)
+                        : sectorData;
+                    if (nearestSets.length >= $settings.ticketsToBuy) {
+                      //console.log(nearestSets);
+                      nearestSets.map((seat) => {
+                        if (reserveTickets(sessionInfo, seat)) {
+                          seatSector = seat.sector;
+                          selection +=
+                            '\n' +
+                            seat.sector +
+                            ' Row: ' +
+                            seat.row.trim() +
+                            ' Seat: ' +
+                            seat.column +
+                            ' €' +
+                            seat.basePrice;
+                        }
+                      });
+                      if (selection) {
+                        scriptFinish = true;
+                      }
                     }
                   }
                 }
@@ -390,6 +467,7 @@
         if (!scriptFinish) {
           displayTextInBottomLeftCorner('No tickets found!');
           console.log('No tickets found!');
+          console.log('TIMEOUT 417')
           setTimeout(() => {
             //window.location.href = $settings.url;
             _countScriptRunning();
@@ -409,7 +487,7 @@
             selection;
           _notify(message);
           window.location.href = $settings.url.replace(
-            'V_principal',
+            'V_blockmap_view',
             'V_' + seatSector.match(/\d+$/)
           );
 
@@ -432,6 +510,7 @@
     } else {
       setTimeout(() => {
         //_notify('Error 500. Automatic restarted!');
+        console.log('TIMEOUT 461')
         window.location.href = $settings.indexUrl;
       }, $settings.noDataRestartTimeout * 1000);
     }
@@ -465,6 +544,7 @@
         '?actualView=' +
         tribuneDataObj
     );
+    console.log('RESP', resp)
     return resp.svgSeatListToSend.filter((item) => {
       let minPrice = $settings.minPrice;
       let maxPrice = $settings.maxPrice;
@@ -474,8 +554,7 @@
     });
   }
 
-  // Receive data
-  async function receive_sheets_data(input) {
+  async function receive_sheets_data() {
     let SHEET_ID = '1TniFrgJi9yJ2eUiCzCRistLUDCzn_v3udrZwhOzmaYI';
     let SHEET_TITLE = 'main';
     let SHEET_RANGE = 'A2:O';
@@ -494,18 +573,12 @@
       let res = await fetch(FULL_URL);
       let rep = await res.text();
       let data = JSON.parse(rep.substr(47).slice(0, -2));
+      console.log(data);
 
       let data_rows = data.table.rows;
-
-      let filtered_data = data_rows.filter((item) => {
-        if (item.c[2].v === input) return item.c;
-      });
-      console.log(filtered_data);
-      if (filtered_data.length === 0) {
-        alert('Не владося знайти введену пошту');
-        return null;
-      }
-      let random_row = filtered_data[0].c;
+      let random_row =
+        data_rows[Math.floor(Math.random() * data_rows.length)].c;
+      console.log(random_row);
 
       sheets_name = random_row[0].v;
       sheets_surname = random_row[1].v;
@@ -581,19 +654,53 @@
   }
 
   function getTribunes(session) {
+    console.log('GET TRIBUNES CALL')
     var viewCode = new URL(location.href).searchParams.get('viewCode');
+
     var resp = _requestAjaxData(
       'https://tickets.realmadrid.com/api/v1/venues/' +
         session.id +
         (viewCode ? '?viewCode=' + viewCode : '')
     );
+    console.log("resp",resp)
     resp.linkList = resp.linkList.filter((item) => {
       return item.availability >= $settings.ticketsToBuy; // && minPriceFlag && maxPriceFlag;
     });
     return resp.linkList;
   }
 
+  function getSubTribune(session, tribuneObj) {
+    var resp = _requestAjaxData(
+      'https://tickets.realmadrid.com/api/v1/venues/' +
+        session.id +
+        '?viewCode=' +
+        tribuneObj.target
+    );
+    return resp
+      .filter((item) => {
+        let condition = item.availability >= $settings.ticketsToBuy;
+        return condition;
+      })
+      .filter((item) => {
+        return $settings.maxPrice === null
+          ? true
+          : item.priceMax <= $settings.maxPrice;
+      })
+      .filter((item) => {
+        return $settings.minPrice === null
+          ? true
+          : item.priceMin >= $settings.minPrice;
+      })
+      .sort((a, b) => {
+        if (a.availability > b.availability) {
+          return -1;
+        }
+      });
+  }
+
   function _requestAjaxData(url, post) {
+
+
     let xhr = new XMLHttpRequest();
     xhr.open(post ? 'POST' : 'GET', url, false);
 
@@ -614,7 +721,7 @@
         'if-modified-since',
         'Sat, 29 Oct 1994 19:43:31 GMT'
       );
-      if (!Object.keys(obSignature).length) {
+      if (!Object.keys(obSignatureTemp).length) {
         xhr.setRequestHeader(
           'ob-app-trace-id',
           Math.random().toString(16).substr(2)
@@ -657,6 +764,7 @@
     }
 
     if (xhr.status != 200) {
+      console.log('TIMEOUT 685')
       setTimeout(() => {
         //_notify('Error ' + xhr.status + '. Automatic restarted!');
         window.location.href = $settings.url;
@@ -727,7 +835,11 @@
    * Method returns setting for the bot
    */
   function _getSettings() {
+    console.log("Settings",window.localStorage.ticketBotSettings)
     let settings = unsafeWindow.ticketBotSettings || null;
+    if (settings === null) {
+      settings = JSON.parse(window.localStorage.ticketBotSettings)
+    }
     if (!settings || typeof settings !== 'object') {
       return null;
     }
@@ -744,7 +856,6 @@
 
       telegramBotId: settings.telegramBotId,
       telegramBotChatId: settings.telegramBotChatId || null,
-      telegramBotChatErrorsId: settings.telegramBotChatErrorsId || null,
       production: settings.production || false,
       debug: settings.debug === undefined ? true : settings.debug,
       reload: settings.reload === undefined ? false : settings.reload,
@@ -857,39 +968,12 @@ getcookie func
   //  Send notification to Telegram Bot
 
   function _notify(message, debugOnly = false) {
-    const serverUrl = 'http://localhost:3309/sendTelegramMessage';
+    const serverUrl = 'http://localhost:3301/sendTelegramMessage';
 
     const data = {
       message: message,
       telegramBotToken: $settings.telegramBotId,
       chatId: $settings.telegramBotChatId,
-      botName: '<RealBot>',
-      chromeProfile: $settings.chromeProfile,
-    };
-
-    fetch(serverUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(data),
-    })
-      .then((response) => response.json())
-      .then((data) => {
-        console.log('Server response:', data);
-      })
-      .catch((error) => {
-        console.error('Error:', error);
-      });
-  }
-
-  function _notify_error(message, debugOnly = false) {
-    const serverUrl = 'http://localhost:3309/sendTelegramMessage';
-
-    const data = {
-      message: message,
-      telegramBotToken: $settings.telegramBotId,
-      chatId: $settings.telegramBotChatErrorsId,
       botName: '<RealBot>',
       chromeProfile: $settings.chromeProfile,
     };
@@ -954,7 +1038,7 @@ getcookie func
    //  Send notification to Slack Bot
 
   function _notify(data) {
-    const url = 'http://localhost:3309/book';
+    const url = 'http://localhost:80/book';
     const xhr = new XMLHttpRequest();
     xhr.open('POST', url, true);
     xhr.setRequestHeader('Content-type', 'application/json');
@@ -1072,7 +1156,6 @@ getcookie func
     }
   }
 
-
   function findElementAndSimulateClick() {
     setInterval(() => {
       const element = document.querySelector(
@@ -1094,6 +1177,10 @@ getcookie func
   // Запускаємо функцію
   findElementAndSimulateClick();
 
+  function sleep(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
   (function () {
     // Create autofill button
     const button = document.createElement('button');
@@ -1110,8 +1197,7 @@ getcookie func
     button.style.transform = 'rotate(90deg)';
     button.style.position = 'absolute';
     button.style.top = '50%';
-    button.style.left = '-25px';
-    button.style.zIndex = '9999';
+    button.style.right = '0px';
     button.style.transform = 'translateY(-50%) rotate(90deg)';
 
     // Apply positioning styles to the body
@@ -1122,23 +1208,21 @@ getcookie func
 
     // Add click event listener
     button.addEventListener('click', function () {
-      const alertData = prompt('Ввведіть необхідну пошту');
-      fill_data(alertData);
+      fill_data();
     });
 
     // Append button to body
     document.body.appendChild(button);
   })();
 
-  async function fill_data(alertData) {
+  async function fill_data() {
     setTimeout(() => {
       const summary = document.querySelector('#selection-summary');
-
+      console.log(summary);
       if (summary) {
-        receive_sheets_data(alertData).then((data) => {
-          if (!data) {
-            return;
-          }
+        receive_sheets_data().then((data) => {
+          console.log('data', data.sheets_name);
+
           const firstNameInput = document.querySelector(
             'input[name="firstName"]'
           );
@@ -1204,111 +1288,13 @@ getcookie func
             }
           }
 
-          const selectCountryCode = document.querySelector('select[name="countryCode"]')
-
-          selectCountryCode.options[1].selected = true
-
-          const changeEvent = new Event('change', { bubbles: true });
-          selectCountryCode.dispatchEvent(changeEvent)
-
           // Check the required checkboxes
-          const acceptTermsCheckbox = document.querySelector(
-            'input[name="acceptTermsAndConds"]'
-          );
-          const channelAgreementCheckbox = document.querySelector(
-            'input[name="channelAgreement-158"]'
-          );
-
-          if (!acceptTermsCheckbox.checked) {
-            acceptTermsCheckbox.click();
-          }
-
-          if (!channelAgreementCheckbox.checked) {
-            channelAgreementCheckbox.click();
-          }
-
+          document.querySelector('input[name="acceptTermsAndConds"]').click();
+          document.querySelector('input[name="channelAgreement-158"]').click();
         });
       }
     }, 2000);
   }
-
-  function setCookiesFromJson(cookieList) {
-    cookieList.forEach(cookie => {
-        let cookieString = `${encodeURIComponent(cookie.name)}=${encodeURIComponent(cookie.value)}`;
-
-        if (cookie.domain) {
-            cookieString += `; domain=${cookie.domain}`;
-        }
-
-        document.cookie = cookieString;
-    });
-  }
-
-  function cloudflareBypass() {
-    let attempt = 0
-    setInterval(() => {
-      if (_xpath('//*[@id="footer-text"]/a[contains(text(), "Cloudflare")]', window.document).length > 0 && attempt < 1)  {
-        // send request to api to bypass cloudflare
-        let proxyInput = document.querySelector('#proxyInput').value
-        let userAgent = window.navigator.userAgent
-        let url = window.location.href
-        console.log(userAgent)
-        
-        let api_url = `http://localhost:3309/cookies?url=${url}&proxy=${proxyInput}&user_agent=${userAgent}`
-        fetch((encodeURI(api_url)), {
-          method: 'GET',
-          })
-            .then((response) => response.json())
-            .then((data) => {
-              console.log('Server response:', data);
-              setCookiesFromJson(data.cookie)
-              // location.reload()
-            })
-            .catch((error) => {
-              console.error('Error:', error);
-            });
-
-        attempt = attempt + 1
-      } 
-    }, 2000)
-  }
-
-  // cloudflareBypass()
-
-
-function notFoundHandler() {
-    let attempt = 0;
-    const interval = setInterval(() => {
-      if (_xpath("//*[contains(text(), '404 Not Found')]", window.document).length > 0 && attempt < 1) {
-        attempt += 1;
-        _notify_error("З'явилась помилка 404, потрібно змінити проксі або оновити сторінку")
-        setTimeout(() => {
-          window.location.reload();
-        }, 45000);
-        
-        clearInterval(interval);
-      }
-    }, 2000);
-  }
-
-  notFoundHandler()
-
-function banHandler() {
-    let attempt = 0;
-    const interval = setInterval(() => {
-      if ((_xpath("//*[contains(text(), 'Sorry, you have been blocked')]", window.document).length > 0) && attempt < 1) {
-        attempt += 1;
-        _notify_error("Браузер забанений, потрібно змінити проксі або оновити сторінку (403)")
-        setTimeout(() => {
-          window.location.href = $settings.url;
-        }, 45000);
-
-        clearInterval(interval);
-      }
-    }, 2000);
-  }
-
-  banHandler()
 
   function findCookieElementAndSimulateClick() {
     setInterval(() => {
