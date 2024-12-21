@@ -2,18 +2,19 @@
 // @name         Proticketing Real Madrid Catcher - Settings v3
 // @namespace    https://www.realmadrid.com
 // @version      3.0
+// @run-at       document-idle
 // @description  Settings configuration
 // @author       Megazoid
 // @match        *://*.realmadrid.com/*
 // @match        *://*.tickets.realmadrid.com/*
-// @run-at       document-idle
 // @grant        unsafeWindow
 // ==/UserScript==
 
 const storedSettings = JSON.parse(localStorage.getItem('ticketBotSettings'));
 
+
 let settings = storedSettings || {
-  chromeProfile: '9454',
+  chromeProfile: 'S3U6_1',
   indexUrl: 'https://www.realmadrid.com/en/tickets',
   url: getSessionUrl(),
   allowSeparateTickets: false,
@@ -23,7 +24,7 @@ let settings = storedSettings || {
   production: true,
   debug: false,
   reload: true,
-  secondsToRestartIfNoTicketsFound: 5,
+  secondsToRestartIfNoTicketsFound: 10,
   timesToBrowserTabReload: 200,
   minPrice: null,
   maxPrice: null,
@@ -31,9 +32,8 @@ let settings = storedSettings || {
   madridista: { login: '222222', password: '2222222' } && null, // To disable this parameter uncomment && null
 };
 
-// Пізніше, коли ви отримаєте eventType і eventNumber, ви можете встановити url:
 
-console.log(settings);
+// Пізніше, коли ви отримаєте eventType і eventNumber, ви можете встановити url:
 
 function createForm() {
   const body = document.body;
@@ -93,7 +93,7 @@ function updateSettings() {
   settings.minPrice = minPrice !== '' ? minPrice : null;
   settings.maxPrice = maxPrice !== '' ? maxPrice : null;
   settings.ticketsToBuy = ticketsToBuy !== '' ? ticketsToBuy : null;
-  settings.chromeProfile = '9454';
+  settings.chromeProfile = 'S3U6_1';
   settings.indexUrl = 'https://www.realmadrid.com/en/tickets';
 
   // Dynamically get the session URL when the button is clicked
@@ -106,7 +106,7 @@ function updateSettings() {
   settings.production = true;
   settings.debug = false;
   settings.reload = true;
-  settings.secondsToRestartIfNoTicketsFound = 5;
+  settings.secondsToRestartIfNoTicketsFound = 10;
   settings.timesToBrowserTabReload = 200;
   settings.madridista = { login: '222222', password: '2222222' } && null; // To disable this parameter uncomment && null
   console.log('Updated settings:', settings);
@@ -135,9 +135,9 @@ function getSessionUrl() {
 
     // Build the URL based on the event type
     if (eventType === 'realmadrid_futbol') {
-      return `https://tickets.realmadrid.com/realmadrid_futbol/${languageCode}/entradas/evento/38667/session/${sessionNumber}/select?viewCode=V_principal`;
+      return `https://tickets.realmadrid.com/realmadrid_futbol/${languageCode}/entradas/evento/38667/session/${sessionNumber}/select?viewCode=V_blockmap_view`;
     } else if (eventType === 'realmadrid_champions') {
-      return `https://tickets.realmadrid.com/realmadrid_champions/${languageCode}/entradas/evento/39300/session/${sessionNumber}/select?viewCode=V_principal`;
+      return `https://tickets.realmadrid.com/realmadrid_champions/${languageCode}/entradas/evento/39300/session/${sessionNumber}/select?viewCode=V_blockmap_view`;
     }
   }
 
