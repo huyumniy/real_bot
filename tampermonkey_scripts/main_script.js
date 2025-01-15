@@ -283,9 +283,13 @@
       let myObjectStringCL = sessionStorage.getItem(
         'ngStorage-trackingInfo_realmadrid_champions'
       );
-
-      // Вибрати між myObjectStringLaLiga та myObjectStringCL
-      let myObjectString = myObjectStringLaLiga || myObjectStringCL;
+      
+      let myObjectStringCopa = sessionStorage.getItem(
+          'ngStorage-trackingInfo_realmadrid_copadelrey'
+        );
+  
+     // Вибрати між myObjectStringLaLiga, myObjectStringCL та myObjectStringCopa
+      let myObjectString = myObjectStringLaLiga || myObjectStringCL || myObjectStringCopa;      
 
       if (!myObjectString) {
         // Відповідна рядок JSON не знайдена в sessionStorage
