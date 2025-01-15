@@ -943,7 +943,7 @@ getcookie func
   //  Send notification to Telegram Bot
 
   function _notify(message, debugOnly = false) {
-    const serverUrl = 'http://localhost:3301/sendTelegramMessage';
+    const serverUrl = 'http://localhost:3309/sendTelegramMessage';
 
     const data = {
       message: message,
@@ -1013,7 +1013,7 @@ getcookie func
    //  Send notification to Slack Bot
 
   function _notify(data) {
-    const url = 'http://localhost:80/book';
+    const url = 'http://localhost:3309/book';
     const xhr = new XMLHttpRequest();
     xhr.open('POST', url, true);
     xhr.setRequestHeader('Content-type', 'application/json');

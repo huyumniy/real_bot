@@ -52,7 +52,8 @@ def get_chromium_options(browser_path: str, arguments: list, thread_num: int) ->
     # options.add_extension('NopeCHA')
     nopecha_path = os.getcwd() + '/tampermonkey'
     extension_path = os.getcwd() + '/BP-Proxy-Switcher-Chrome'
-    command = f"-load-extension={extension_path},{nopecha_path}"
+    zenmate_path = os.getcwd() + '/ZenMateVpn'
+    command = f"-load-extension={extension_path},{nopecha_path},{zenmate_path}"
     
     
     if os.name == 'posix' and platform.system() == 'Darwin': vpn_extension_path = os.getcwd() + "/vpn"
@@ -351,7 +352,7 @@ def worker(thread_num, initialUrl, serverName, serverPort, isNopeCha, browsersAm
             ok_button.click()
             time.sleep(1)
             proxy_switch_list = driver.eles('css:#proxySelectDiv > div > div > ul > li')
-            proxy_switch_list[random.randint(2, len(proxy_switch_list))].click()
+            proxy_switch_list[random.randint(2, len(proxy_switch_list) - 1)].click()
             time.sleep(5)
             proxy_auto_reload_checkbox = driver.ele('xpath://*[@id="autoReload"]')
             proxy_auto_reload_checkbox.click()
