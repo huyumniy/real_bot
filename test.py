@@ -52,8 +52,7 @@ def get_chromium_options(browser_path: str, arguments: list, thread_num: int) ->
     # options.add_extension('NopeCHA')
     nopecha_path = os.getcwd() + '/tampermonkey'
     extension_path = os.getcwd() + '/BP-Proxy-Switcher-Chrome'
-    zenmate_path = os.getcwd() + '/ZenMateVpn'
-    command = f"-load-extension={extension_path},{nopecha_path},{zenmate_path}"
+    command = f"-load-extension={extension_path},{nopecha_path}"
     
     
     if os.name == 'posix' and platform.system() == 'Darwin': vpn_extension_path = os.getcwd() + "/vpn"
