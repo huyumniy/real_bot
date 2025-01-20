@@ -147,7 +147,8 @@
                 
                 // Collect all input values
                 const initialUrl = document.querySelector('#initialUrl').value;
-                const serverPort = document.querySelector('#serverPort').value;
+                let serverPortRaw = document.querySelector('#serverPort').value;
+                const serverPort = serverPortRaw.trim()
                 const serverName = document.querySelector('#serverName').value;
                 const browsersAmount = document.querySelector('#browserAmount').value;
                 const captchaSolver = document.querySelector('input[name="captchaSolver"]:checked').value;
