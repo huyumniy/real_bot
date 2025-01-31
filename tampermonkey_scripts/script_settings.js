@@ -147,6 +147,9 @@ function getSessionUrl() {
   } else if (eventType === 'realmadrid_ligavipsilver') {
     const eventNumber = extractEventNumber(currentUrl, `https://tickets.realmadrid.com/realmadrid_ligavipsilver/${languageCode}/entradas/evento/`)
     return `https://tickets.realmadrid.com/realmadrid_ligavipsilver/${languageCode}/entradas/evento/${eventNumber}/session/${sessionNumber}/select?viewCode=V_blockmap_view`;
+  } else if (eventType === 'realmadrid_ligavipgold') {
+    const eventNumber = extractEventNumber(currentUrl, `https://tickets.realmadrid.com/realmadrid_ligavipgold/${languageCode}/entradas/evento/`)
+    return `https://tickets.realmadrid.com/realmadrid_ligavipgold/${languageCode}/entradas/evento/${eventNumber}/session/${sessionNumber}/select?viewCode=V_blockmap_view`;
   }
   return null;
 }
