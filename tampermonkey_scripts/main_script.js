@@ -287,9 +287,17 @@
       let myObjectStringCopa = sessionStorage.getItem(
           'ngStorage-trackingInfo_realmadrid_copadelrey'
         );
+      
+      let myObjectStringSilver = sessionStorage.getItem(
+          'ngStorage-trackingInfo_realmadrid_ligavipsilver'
+      )
+
+      let myObjectStringGold = sessionStorage.getItem(
+          'ngStorage-trackingInfo_realmadrid_ligavigold'
+      )
   
      // Вибрати між myObjectStringLaLiga, myObjectStringCL та myObjectStringCopa
-      let myObjectString = myObjectStringLaLiga || myObjectStringCL || myObjectStringCopa;      
+      let myObjectString = myObjectStringLaLiga || myObjectStringCL || myObjectStringCopa || myObjectStringSilver || myObjectStringGold;
 
       if (!myObjectString) {
         // Відповідна рядок JSON не знайдена в sessionStorage
@@ -346,44 +354,52 @@
         if ($settings.needSectorArray) {
           // && !getTribunes(sessionInfo).length) {
           $settings.needSectorArray.map((item) => {
-            let sectorData = getSectorData(sessionInfo, item);
-            if (sectorData && sectorData[0] && sectorData[0].sector) {
-              console.log('---- Check ' + sectorData[0].sector + ' ----');
-              nearestSets =
-                $settings.ticketsToBuy > 1 && !$settings.allowSeparateTickets
-                  ? _getNearestSeats(sectorData, $settings.ticketsToBuy)
-                  : sectorData;
-              if (nearestSets.length >= $settings.ticketsToBuy) {
-                //console.log(nearestSets);
-                nearestSets.map((seat) => {
-                  if (reserveTickets(sessionInfo, seat)) {
-                    seatSector = seat.sector;
-                    selection +=
-                      '\n' +
-                      seat.sector +
-                      ' Row: ' +
-                      seat.row.trim() +
-                      ' Seat: ' +
-                      seat.column +
-                      ' €' +
-                      seat.basePrice;
+            if ($settings.ticketsToBuy <= _getTicketsInCart()) {scriptFinish= true}
+            if (!scriptFinish) {
+              let sectorData = getSectorData(sessionInfo, item);
+              if (sectorData && sectorData[0] && sectorData[0].sector) {
+                console.log('---- Check ' + sectorData[0].sector + ' ----');
+                nearestSets =
+                  $settings.ticketsToBuy > 1 && !$settings.allowSeparateTickets
+                    ? _getNearestSeats(sectorData, $settings.ticketsToBuy)
+                    : sectorData;
+                if (nearestSets.length >= $settings.ticketsToBuy) {
+                  //console.log(nearestSets);
+                  nearestSets.map((seat) => {
+                    if ($settings.ticketsToBuy <= _getTicketsInCart()) {scriptFinish= true}
+                    if (!scriptFinish) {
+                      if (reserveTickets(sessionInfo, seat)) {
+                        seatSector = seat.sector;
+                        selection +=
+                          '\n' +
+                          seat.sector +
+                          ' Row: ' +
+                          seat.row.trim() +
+                          ' Seat: ' +
+                          seat.column +
+                          ' €' +
+                          seat.basePrice;
+                      }
+                    };
+                  });
+                  if (selection) {
+                    scriptFinish = true;
                   }
-                });
-                if (selection) {
-                  scriptFinish = true;
                 }
               }
-            }
+            };
           });
         }
         getTribunes(sessionInfo).map((tribune) => {
           console.log("===========================TRIBUNE=================",tribune)
+          if ($settings.ticketsToBuy <= _getTicketsInCart()) {scriptFinish= true}
           if (!scriptFinish) {
             
             console.log('=========== ' + tribune.viewName + ' =============');
             let tribuneData = getTribuneData(sessionInfo, tribune);
             console.log('GET TRIBUNE DATA', tribuneData)
             tribuneData.map((tribuneDataObj) => {
+              if ($settings.ticketsToBuy <= _getTicketsInCart()) {scriptFinish= true}
               if (!scriptFinish) {
                 let subTribunes = []
                 if (tribuneDataObj.aggregatedView) {
@@ -391,41 +407,47 @@
                 }
                 console.log('SUBTRIBUNES', subTribunes)
                 subTribunes.map((subTribune) => {
-                  let sectorData = getSectorData(
-                    sessionInfo,
-                    subTribune.target
-                  );
-                  
-  
-                  console.log("SECTOR DATA", sectorData)
-                  if (sectorData && sectorData[0] && sectorData[0].sector) {
-                    //console.log('---- Check ' + sectorData[0].sector + ' ----');
-                    nearestSets =
-                      $settings.ticketsToBuy > 1 &&
-                      !$settings.allowSeparateTickets
-                        ? _getNearestSeats(sectorData, $settings.ticketsToBuy)
-                        : sectorData;
-                    if (nearestSets.length >= $settings.ticketsToBuy) {
-                      //console.log(nearestSets);
-                      nearestSets.map((seat) => {
-                        if (reserveTickets(sessionInfo, seat)) {
-                          seatSector = seat.sector;
-                          selection +=
-                            '\n' +
-                            seat.sector +
-                            ' Row: ' +
-                            seat.row.trim() +
-                            ' Seat: ' +
-                            seat.column +
-                            ' €' +
-                            seat.basePrice;
+                  if ($settings.ticketsToBuy <= _getTicketsInCart()) {scriptFinish= true}
+                  if (!scriptFinish) {
+                    let sectorData = getSectorData(
+                      sessionInfo,
+                      subTribune.target
+                    );
+                    
+    
+                    console.log("SECTOR DATA", sectorData)
+                    if (sectorData && sectorData[0] && sectorData[0].sector) {
+                      //console.log('---- Check ' + sectorData[0].sector + ' ----');
+                      nearestSets =
+                        $settings.ticketsToBuy > 1 &&
+                        !$settings.allowSeparateTickets
+                          ? _getNearestSeats(sectorData, $settings.ticketsToBuy)
+                          : sectorData;
+                      if (nearestSets.length >= $settings.ticketsToBuy) {
+                        //console.log(nearestSets);
+                        nearestSets.map((seat) => {
+                          if ($settings.ticketsToBuy <= _getTicketsInCart()) {scriptFinish= true}
+                          if (!scriptFinish) {
+                            if (reserveTickets(sessionInfo, seat)) {
+                              seatSector = seat.sector;
+                              selection +=
+                                '\n' +
+                                seat.sector +
+                                ' Row: ' +
+                                seat.row.trim() +
+                                ' Seat: ' +
+                                seat.column +
+                                ' €' +
+                                seat.basePrice;
+                            }
+                          }
+                        });
+                        if (selection) {
+                          scriptFinish = true;
                         }
-                      });
-                      if (selection) {
-                        scriptFinish = true;
                       }
                     }
-                  }
+                  };
                 })
                 if (subTribunes.length == 0) {
                   let sectorData = getSectorData(
@@ -445,17 +467,20 @@
                     if (nearestSets.length >= $settings.ticketsToBuy) {
                       //console.log(nearestSets);
                       nearestSets.map((seat) => {
-                        if (reserveTickets(sessionInfo, seat)) {
-                          seatSector = seat.sector;
-                          selection +=
-                            '\n' +
-                            seat.sector +
-                            ' Row: ' +
-                            seat.row.trim() +
-                            ' Seat: ' +
-                            seat.column +
-                            ' €' +
-                            seat.basePrice;
+                        if ($settings.ticketsToBuy <= _getTicketsInCart()) {scriptFinish= true}
+                        if (!scriptFinish) {
+                          if (reserveTickets(sessionInfo, seat)) {
+                            seatSector = seat.sector;
+                            selection +=
+                              '\n' +
+                              seat.sector +
+                              ' Row: ' +
+                              seat.row.trim() +
+                              ' Seat: ' +
+                              seat.column +
+                              ' €' +
+                              seat.basePrice;
+                          }
                         }
                       });
                       if (selection) {
@@ -842,6 +867,17 @@
       madridista: settings.madridista || null,
       needSectorArray: settings.needSectorArray || null,
     };
+  }
+
+  function _getTicketsInCart() {
+    let url = window.location.href;
+    let eventType = url.split('tickets.realmadrid.com/')[1].split('/')[0]
+    let dataRaw = sessionStorage.getItem(`ngStorage-trackingInfo_${eventType}`);
+    let data = JSON.parse(dataRaw);
+    console.log('SESSION STORAGE', data);
+    let cartTickets = data?.cart?.items;
+    console.log(cartTickets, "CART TICKETS");
+    return cartTickets !== undefined && cartTickets !== null ? cartTickets.length : 0;
   }
 
   /**
