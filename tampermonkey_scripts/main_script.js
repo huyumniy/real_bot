@@ -234,6 +234,7 @@
     } else if (/areaPrice=/i.test(window.location.href)) {
       window.location.href = $settings.indexUrl;
     } else if (/\/evento/i.test(window.location.pathname)) {
+
       /*let intervalValue = 100;
             let timeoutSum = intervalValue;
             let maxTimeout = 10000;
@@ -306,6 +307,7 @@
       }
 
       if (sessionInfo) {
+        console.log('XASDFASDF!!!!')
         //clearInterval(intHandler);
         //console.log('Loaded after ' + timeoutSum + 'sec of waiting!');
         var nearestSets = [];
@@ -857,7 +859,7 @@ getcookie func
   //  Send notification to Telegram Bot
 
   function _notify(message, debugOnly = false) {
-    const serverUrl = 'http://localhost:3340/sendTelegramMessage';
+    const serverUrl = 'http://localhost:3309/sendTelegramMessage';
 
     const data = {
       message: message,
@@ -884,7 +886,7 @@ getcookie func
   }
 
   function _notify_error(message, debugOnly = false) {
-    const serverUrl = 'http://localhost:3340/sendTelegramMessage';
+    const serverUrl = 'http://localhost:3309/sendTelegramMessage';
 
     const data = {
       message: message,
@@ -954,7 +956,7 @@ getcookie func
    //  Send notification to Slack Bot
 
   function _notify(data) {
-    const url = 'http://localhost:3340/book';
+    const url = 'http://localhost:3309/book';
     const xhr = new XMLHttpRequest();
     xhr.open('POST', url, true);
     xhr.setRequestHeader('Content-type', 'application/json');
@@ -1231,50 +1233,6 @@ getcookie func
       }
     }, 2000);
   }
-
-  function setCookiesFromJson(cookieList) {
-    cookieList.forEach(cookie => {
-        let cookieString = `${encodeURIComponent(cookie.name)}=${encodeURIComponent(cookie.value)}`;
-
-        if (cookie.domain) {
-            cookieString += `; domain=${cookie.domain}`;
-        }
-
-        document.cookie = cookieString;
-    });
-  }
-
-  function cloudflareBypass() {
-    let attempt = 0
-    setInterval(() => {
-      if (_xpath('//*[@id="footer-text"]/a[contains(text(), "Cloudflare")]', window.document).length > 0 && attempt < 1)  {
-        // send request to api to bypass cloudflare
-        let proxyInput = document.querySelector('#proxyInput').value
-        let userAgent = window.navigator.userAgent
-        let url = window.location.href
-        console.log(userAgent)
-        
-        let api_url = `http://localhost:3340/cookies?url=${url}&proxy=${proxyInput}&user_agent=${userAgent}`
-        fetch((encodeURI(api_url)), {
-          method: 'GET',
-          })
-            .then((response) => response.json())
-            .then((data) => {
-              console.log('Server response:', data);
-              setCookiesFromJson(data.cookie)
-              // location.reload()
-            })
-            .catch((error) => {
-              console.error('Error:', error);
-            });
-
-        attempt = attempt + 1
-      } 
-    }, 2000)
-  }
-
-  // cloudflareBypass()
-
 
 function notFoundHandler() {
     let attempt = 0;

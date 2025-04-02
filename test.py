@@ -156,7 +156,7 @@ def parse_data_from_file(file_path):
         data += line + '\n'
     
     return data
-    
+
 
 def extract_time_from_text(text):
     # Use regex to extract the time in the format hh:mm:ss
@@ -209,6 +209,7 @@ def worker(thread_num, initialUrl, serverName, serverPort, isNopeCha, browsersAm
 
     # Initialize the browser
     driver = ChromiumPage(addr_or_opts=options)
+    
     try:
         time.sleep(5)
         tabs = driver.get_tabs()

@@ -122,9 +122,6 @@ function getSessionUrl() {
   const sessionNumber = getSessionNumberFromUrl(currentUrl);
 
   if (sessionNumber) {
-    // Check if the URL contains /es_ES/ or /en_US/ and set the language code accordingly
-    const languageCode = currentUrl.includes('/es_ES/') ? 'es_ES' : 'en_US';
-
     // Determine the event type based on the URL pattern
     let eventType = '';
     if (currentUrl.includes('realmadrid_futbol')) {
@@ -135,9 +132,9 @@ function getSessionUrl() {
 
     // Build the URL based on the event type
     if (eventType === 'realmadrid_futbol') {
-      return `https://tickets.realmadrid.com/realmadrid_futbol/${languageCode}/entradas/evento/38667/session/${sessionNumber}/select?viewCode=V_principal`;
+      return `https://tickets.realmadrid.com/realmadrid_futbol/select/${sessionNumber}?viewCode=V_principal`;
     } else if (eventType === 'realmadrid_champions') {
-      return `https://tickets.realmadrid.com/realmadrid_champions/${languageCode}/entradas/evento/39300/session/${sessionNumber}/select?viewCode=V_principal`;
+      return `https://tickets.realmadrid.com/realmadrid_champions/select/${sessionNumber}?viewCode=V_principal`;
     }
   }
 
@@ -145,23 +142,15 @@ function getSessionUrl() {
 }
 
 function getSessionNumberFromUrl(url) {
-  const spanishUrlPattern =
-    'https://tickets.realmadrid.com/realmadrid_futbol/es_ES/entradas/evento/38667/session/';
-  const englishUrlPattern =
-    'https://tickets.realmadrid.com/realmadrid_futbol/en_US/entradas/evento/38667/session/';
-  const spanishUrlPatternCL =
-    'https://tickets.realmadrid.com/realmadrid_champions/es_ES/entradas/evento/39300/session/';
-  const englishUrlPatternCL =
-    'https://tickets.realmadrid.com/realmadrid_champions/en_US/entradas/evento/39300/session/';
+  const futbolPattern =
+    'https://tickets.realmadrid.com/realmadrid_futbol/select/';
+  const championsPattern =
+    'https://tickets.realmadrid.com/realmadrid_champions/select/';
 
-  if (url.startsWith(spanishUrlPattern)) {
-    return extractSessionNumber(url, spanishUrlPattern);
-  } else if (url.startsWith(englishUrlPattern)) {
-    return extractSessionNumber(url, englishUrlPattern);
-  } else if (url.startsWith(spanishUrlPatternCL)) {
-    return extractSessionNumber(url, spanishUrlPatternCL);
-  } else if (url.startsWith(englishUrlPatternCL)) {
-    return extractSessionNumber(url, englishUrlPatternCL);
+  if (url.startsWith(futbolPattern)) {
+    return extractSessionNumber(url, futbolPattern);
+  } else if (url.startsWith(championsPattern)) {
+    return extractSessionNumber(url, championsPattern);
   }
 
   return null;
