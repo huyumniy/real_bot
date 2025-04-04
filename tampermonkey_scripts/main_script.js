@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         Proticketing Real Madrid Ticket Catcher v2.2.1_a
+// @name         Proticketing Real Madrid Ticket Catcher v2.2.1_Autofill
 // @namespace    https://www.realmadrid.com/
-// @version      2.2.1.a_Server
+// @version      2.2.1_Server_Autofill
 // @description  try to take over the world!
 // @author       Megazoid
 // @match        *://*.realmadrid.com/*
@@ -15,6 +15,7 @@
 // @grant        GM_getValue
 // @grant        GM_setValue
 // @grant        GM.info
+// @grant        GM_registerMenuCommand
 // @grant        GM_openInTab
 // @grant        GM_xmlhttpRequest
 // @grant        GM_log
@@ -23,14 +24,13 @@
 // ==/UserScript==
 
 (function () {
-  'use strict';
+  ("use strict");
 
   let open = window.XMLHttpRequest.prototype.open;
   let send = window.XMLHttpRequest.prototype.send;
   let setHeader = window.XMLHttpRequest.prototype.setRequestHeader;
   let headerRequests = {};
   let obSignature = {};
-  let obSignatureTemp = {};
   let $settings = _getSettings();
 
   window.XMLHttpRequest.prototype.open = function (
@@ -46,7 +46,7 @@
 
   window.XMLHttpRequest.prototype.send = function (data) {
     this.addEventListener(
-      'readystatechange',
+      "readystatechange",
       function () {
         if (this.readyState === 4) {
           if (this.status === 200) {
@@ -55,7 +55,7 @@
               JSON.parse(this.responseText);
             } catch (e) {
               console.error(
-                'Не вдалося розпарсити відповідь як JSON:',
+                "Не вдалося розпарсити відповідь як JSON:",
                 this.responseText
               );
               // Опційно, перенаправлення або інші дії
@@ -72,17 +72,15 @@
 
   function handleRequestError(status, statusText) {
     console.error(`Request failed with status ${status}: ${statusText}`);
-    if (status === 403 || status === 401) {
-      setTimeout(() => {
-        window.location.reload(); // Або виклик функції для повторного запиту
-      }, 30000); // Перенаправлення на URL для відновлення сесії
-    } else {
-      // Обробка інших помилок мережі
-      // Наприклад, повторний запит через певний час
-      setTimeout(() => {
-        window.location.reload(); // Або виклик функції для повторного запиту
-      }, 35000);
-    }
+    // if (status === 403 || status === 401) {
+    //   window.location.reload(); // Перенаправлення на URL для відновлення сесії
+    // } else {
+    // Обробка інших помилок мережі
+    // Наприклад, повторний запит через певний час
+    setTimeout(() => {
+      window.location.reload(); // Або виклик функції для повторного запиту
+    }, 30000);
+    // }
   }
 
   function openReplacement(method, url, async, user, password) {
@@ -111,14 +109,12 @@
     if (headerRequests && !headerRequests[this._url]) {
       headerRequests[this._url] = {};
     }
+
     if (
-      ['ob-timestamp', 'ob-signature-token', 'ob-app-trace-id'].includes(header)
-    ) {
-      obSignatureTemp[header] = value;
-    }
-    if (
-      this._url.match(/\/api\/v1\/venues\/\d+\/?viewCode/) &&
-      ['ob-timestamp', 'ob-signature-token', 'ob-app-trace-id'].includes(header)
+      this._url.match(
+        /\/channels-api\/v1\/catalog\/sessions\/\d+\/venue-map\?viewCode/
+      ) &&
+      ["ob-session-token"].includes(header)
     ) {
       obSignature[header] = value;
     }
@@ -146,16 +142,6 @@
     this.headers[header].push(value);
   }
 
-  function _captcha() {
-    return window.location.href.includes('oneboxtm.queue-it.net');
-  }
-
-  function iframeRef(frameRef) {
-    return frameRef.contentWindow
-      ? frameRef.contentWindow.document
-      : frameRef.contentDocument;
-  }
-
   window.XMLHttpRequest.prototype.open = openReplacement;
   window.XMLHttpRequest.prototype.send = sendReplacement;
   window.XMLHttpRequest.prototype.setRequestHeader = setRequestHeader;
@@ -165,65 +151,53 @@
 
   function findConfirmElementAndSimulateClick() {
     setInterval(() => {
-      const element = document.getElementById('buttonConfirmRedirect');
-      const elementArrive = document.getElementById('lbHeaderP');
+      const element = document.getElementById("buttonConfirmRedirect");
+      const elementArrive = document.querySelector("#challenge-container");
 
-      let btnQueue = document.getElementById('MainPart_divWarningBox');
+      let btnQueue = document.getElementById("MainPart_divWarningBox");
+      let linkInsideButtonQueue = null;
+      if (btnQueue) {
+        linkInsideButtonQueue = btnQueue.querySelector("a");
+      }
 
-      let linkInsideButtonQueue = btnQueue.querySelector('a');
+      if (btnQueue) {
+        // Натискання на посилання
+        let queueError = _xpath(
+          '//*[contains(text(), "Número de cola rechazado") or contains(text(), "Has tardado demasiado en resolver el captcha") or contains(text(), "Queue number rejected") or contains(text(), "Número de cola usado")]'
+        );
+        if (queueError) {
+          console.log("DELETED COOKIES");
+          deleteAllCookies();
+        }
 
-      if (element) {
-        console.log('Елемент знайдено:', element);
+        if (linkInsideButtonQueue) linkInsideButtonQueue.click();
+      } else if (elementArrive) {
+        let continueCaptcha = elementArrive.querySelector("button");
+        continueCaptcha.click();
+      } else if (element) {
+        console.log("Елемент знайдено:", element);
 
         // Емуляція кліку на знайденому елементі
         element.click();
-        console.log('Емульований клік викликав функцію.');
-      } else if (elementArrive) {
-        // назад у чергу якщо є попередження про відсутність активності більше 10 хвилин
-        window.history.back();
-      } else if (btnQueue) {
-        // Натискання на посилання
-        linkInsideButtonQueue.click();
+        console.log("Емульований клік викликав функцію.");
       } else {
-        console.log('Елемент не знайдено. Продовжуємо пошук.');
+        console.log("Елемент не знайдено. Продовжуємо пошук.");
       }
-    }, 90000); // Інтервал у мілісекундах (90 секунд)
+    }, 25000); // Інтервал у мілісекундах (90 секунд)
   }
 
-  if (_captcha()) {
-    setTimeout(() => {
-      let button = document.querySelector('#challenge-container > button');
-      console.log(button);
-      if (button) {
-        button.click();
-        setTimeout(() => {
-          location.reload();
-        }, 10000);
-      }
-    }, 5000);
+  function deleteAllCookies() {
+    document.cookie.split(";").forEach((cookie) => {
+      const eqPos = cookie.indexOf("=");
+      const name = eqPos > -1 ? cookie.substring(0, eqPos) : cookie;
+      document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT";
+    });
   }
-
-  // setTimeout(() => {
-  //   let cloudflare = document.querySelector('a[href="https://www.cloudflare.com?utm_source=challenge&utm_campaign=l"]')
-  //   if (cloudflare) {
-  //     console.log(cloudflare)
-  //     const element = document.querySelector('#RlquG0 > div > div > div');
-  //     console.log(element)
-  //     const iframe = element.shadowRoot;
-  //     console.log(iframe)
-
-  //     const rect = element.getBoundingClientRect();
-  //     console.log(rect)
-  //     const x = rect.left; // X coordinate relative to the viewport
-  //     const y = rect.top;  // Y coordinate relative to the viewport
-
-  //     simulate(element, "click", { pointerX: x, pointerY: y })
-  //   }
-  // }, 5000)
 
   if (!$settings) {
-    console.log('Ticket Catcher settings not found!');
+    console.log("Ticket Catcher settings not found!");
     findConfirmElementAndSimulateClick();
+
     return;
   }
 
@@ -232,13 +206,14 @@
 
   let prevTicketsFound = null;
 
-  document.title = $settings.chromeProfile + ' - ' + document.title;
+  document.title = $settings.chromeProfile + " - " + document.title;
 
   // INITIALIZATION
+
   _countScriptRunning();
 
   unsafeWindow.document.arrive(
-    '#venue-module',
+    "#mmc-venue-viewer",
     { onceOnly: true },
     function (newElem) {
       _init();
@@ -251,7 +226,7 @@
    * Initialization method
    */
   function _init() {
-    sessionStorage.removeItem('selectedStuff_clubatleticodemadridchampions');
+    sessionStorage.removeItem("selectedStuff_clubatleticodemadridchampions");
     let priceAreas = null;
     let priceAreasTotal = 0;
     if ($settings.indexUrl == window.location.href) {
@@ -260,7 +235,7 @@
       }, 3000);
     } else if (/areaPrice=/i.test(window.location.href)) {
       window.location.href = $settings.indexUrl;
-    } else if (/\/evento/i.test(window.location.pathname)) {
+    } else if (/\/select/i.test(window.location.pathname)) {
       /*let intervalValue = 100;
             let timeoutSum = intervalValue;
             let maxTimeout = 10000;
@@ -277,226 +252,138 @@
 
       // Отримати рядок JSON з sessionStorage
       let myObjectStringLaLiga = sessionStorage.getItem(
-        'ngStorage-trackingInfo_realmadrid_futbol'
+        "trackingInfo_realmadrid_futbol"
       );
 
       let myObjectStringCL = sessionStorage.getItem(
-        'ngStorage-trackingInfo_realmadrid_champions'
+        "trackingInfo_realmadrid_champions"
       );
-      
+
       let myObjectStringCopa = sessionStorage.getItem(
-          'ngStorage-trackingInfo_realmadrid_copadelrey'
-        );
-      
+        "trackingInfo_realmadrid_copadelrey"
+      );
+
       let myObjectStringSilver = sessionStorage.getItem(
-          'ngStorage-trackingInfo_realmadrid_ligavipsilver'
-      )
+        "trackingInfo_realmadrid_ligavipsilver"
+      );
 
       let myObjectStringGold = sessionStorage.getItem(
-          'ngStorage-trackingInfo_realmadrid_ligavigold'
-      )
-  
-     // Вибрати між myObjectStringLaLiga, myObjectStringCL та myObjectStringCopa
-      let myObjectString = myObjectStringLaLiga || myObjectStringCL || myObjectStringCopa || myObjectStringSilver || myObjectStringGold;
+        "trackingInfo_realmadrid_ligavigold"
+      );
+
+      // Вибрати між myObjectStringLaLiga, myObjectStringCL та myObjectStringCopa
+      let myObjectString =
+        myObjectStringLaLiga ||
+        myObjectStringCL ||
+        myObjectStringCopa ||
+        myObjectStringSilver ||
+        myObjectStringGold;
 
       if (!myObjectString) {
+        alert("no myObjectString found");
         // Відповідна рядок JSON не знайдена в sessionStorage
         // Ваш код обробки відсутності рядка JSON
         window.location.href = $settings.url;
       } else {
         let myObject = JSON.parse(myObjectString);
-        let itemsQuantity = myObject?.cart?.items?.length || 0;
+        let itemsQuantity = myObject?.order?.items?.length || 0;
 
         if (itemsQuantity >= $settings.ticketsToBuy) {
           alert(
-            'Seats already reserved! Please delete them to start new search!'
+            "Seats already reserved! Please delete them to start new search!"
           );
-          _notify('Seats reserved!');
-          throw 'Seats already reserved! Please delete them to start new search!';
+          _notify("Seats reserved!");
+          throw "Seats already reserved! Please delete them to start new search!";
           return;
         }
       }
 
       /////////////
       if (
-        $$('#member-module').length &&
+        $$("#member-module").length &&
         $settings.madridista !== null &&
-        !$$('#success-member-login-avet').text().trim().length
+        !$$("#success-member-login-avet").text().trim().length
       ) {
         //clearInterval(intHandler);
         _requestAjaxData(
-          'https://tickets.realmadrid.com/api/v1/groups/userGroupValidations?idGroup=4254&password=' +
+          "https://tickets.realmadrid.com/api/v1/groups/userGroupValidations?idGroup=4254&password=" +
             $settings.madridista.password +
-            '&username=' +
+            "&username=" +
             $settings.madridista.login
         );
         unsafeWindow.location.href = $settings.url;
       }
+      let session_id = document.location.href
+        .split("/select/")[1]
+        .split("?")[0];
 
-      let scope = unsafeWindow.angular
-        .element(document.getElementById('venueView'))
-        .scope();
-      var ctrl = scope && scope.$$childHead && scope.$$childHead.$ctrl;
-      var sessionInfo = ctrl && ctrl.sessionInfo;
-
-      if ((!ctrl || !sessionInfo) && timeoutSum >= maxTimeout) {
-        //clearInterval(intHandler);
-        window.location.href = $settings.url;
-      }
+      let sessionInfo = _requestAjaxData(
+        "https://tickets.realmadrid.com/channels-api/v1/catalog/sessions/" +
+          session_id
+      );
 
       if (sessionInfo) {
         //clearInterval(intHandler);
         //console.log('Loaded after ' + timeoutSum + 'sec of waiting!');
         var nearestSets = [];
         let scriptFinish = false;
-        let selection = '';
-        let seatSector; // Declare seatSector outside the if block
-        if ($settings.needSectorArray) {
-          // && !getTribunes(sessionInfo).length) {
-          $settings.needSectorArray.map((item) => {
-            if ($settings.ticketsToBuy <= _getTicketsInCart()) {scriptFinish= true}
-            if (!scriptFinish) {
-              let sectorData = getSectorData(sessionInfo, item);
-              if (sectorData && sectorData[0] && sectorData[0].sector) {
-                console.log('---- Check ' + sectorData[0].sector + ' ----');
-                nearestSets =
-                  $settings.ticketsToBuy > 1 && !$settings.allowSeparateTickets
-                    ? _getNearestSeats(sectorData, $settings.ticketsToBuy)
-                    : sectorData;
-                if (nearestSets.length >= $settings.ticketsToBuy) {
-                  //console.log(nearestSets);
-                  nearestSets.map((seat) => {
-                    if ($settings.ticketsToBuy <= _getTicketsInCart()) {scriptFinish= true}
-                    if (!scriptFinish) {
-                      if (reserveTickets(sessionInfo, seat)) {
-                        seatSector = seat.sector;
-                        selection +=
-                          '\n' +
-                          seat.sector +
-                          ' Row: ' +
-                          seat.row.trim() +
-                          ' Seat: ' +
-                          seat.column +
-                          ' €' +
-                          seat.basePrice;
-                      }
-                    };
-                  });
-                  if (selection) {
-                    scriptFinish = true;
-                  }
-                }
-              }
-            };
-          });
-        }
-        getTribunes(sessionInfo).map((tribune) => {
-          console.log("===========================TRIBUNE=================",tribune)
-          if ($settings.ticketsToBuy <= _getTicketsInCart()) {scriptFinish= true}
-          if (!scriptFinish) {
-            
-            console.log('=========== ' + tribune.viewName + ' =============');
-            let tribuneData = getTribuneData(sessionInfo, tribune);
-            console.log('GET TRIBUNE DATA', tribuneData)
-            tribuneData.map((tribuneDataObj) => {
-              if ($settings.ticketsToBuy <= _getTicketsInCart()) {scriptFinish= true}
-              if (!scriptFinish) {
-                let subTribunes = []
-                if (tribuneDataObj.aggregatedView) {
-                  subTribunes = getTribuneData(sessionInfo, tribuneDataObj)
-                }
-                console.log('SUBTRIBUNES', subTribunes)
-                subTribunes.map((subTribune) => {
-                  if ($settings.ticketsToBuy <= _getTicketsInCart()) {scriptFinish= true}
-                  if (!scriptFinish) {
-                    let sectorData = getSectorData(
-                      sessionInfo,
-                      subTribune.target
-                    );
-                    
-    
-                    console.log("SECTOR DATA", sectorData)
-                    if (sectorData && sectorData[0] && sectorData[0].sector) {
-                      //console.log('---- Check ' + sectorData[0].sector + ' ----');
-                      nearestSets =
-                        $settings.ticketsToBuy > 1 &&
-                        !$settings.allowSeparateTickets
-                          ? _getNearestSeats(sectorData, $settings.ticketsToBuy)
-                          : sectorData;
-                      if (nearestSets.length >= $settings.ticketsToBuy) {
-                        //console.log(nearestSets);
-                        nearestSets.map((seat) => {
-                          if ($settings.ticketsToBuy <= _getTicketsInCart()) {scriptFinish= true}
-                          if (!scriptFinish) {
-                            if (reserveTickets(sessionInfo, seat)) {
-                              seatSector = seat.sector;
-                              selection +=
-                                '\n' +
-                                seat.sector +
-                                ' Row: ' +
-                                seat.row.trim() +
-                                ' Seat: ' +
-                                seat.column +
-                                ' €' +
-                                seat.basePrice;
-                            }
-                          }
-                        });
-                        if (selection) {
-                          scriptFinish = true;
-                        }
-                      }
-                    }
-                  };
-                })
-                if (subTribunes.length == 0) {
-                  let sectorData = getSectorData(
+        let selection = "";
+
+        getTribunes(sessionInfo).forEach((tribune) => {
+          console.log(
+            "===========================TRIBUNE=================",
+            tribune
+          );
+          if (scriptFinish) return;
+
+          console.log("=========== " + tribune.viewName + " =============");
+          const tribuneData = getTribuneData(
+            sessionInfo,
+            tribune.targetView.id
+          );
+          console.log("GET TRIBUNE DATA", tribuneData);
+
+          tribuneData.forEach((tribuneDataObj) => {
+            if (scriptFinish) return;
+            // Determine if there are sub-tribunes
+            let subTribunes = [];
+            if (
+              tribuneDataObj.targetView.code ===
+                tribuneDataObj.targetView.sectors[0].code &&
+              tribuneDataObj.targetView.sectors.length === 1
+            ) {
+              subTribunes = getTribuneData(
+                sessionInfo,
+                tribuneDataObj.targetView.id
+              );
+            }
+            // If subTribunes exist, process each one; otherwise, process the current tribuneDataObj
+            if (subTribunes.length > 0) {
+              subTribunes.forEach((subTribune) => {
+                if (!scriptFinish) {
+                  scriptFinish = processSector(
                     sessionInfo,
-                    tribuneDataObj.target
+                    subTribune.targetView.id,
+                    scriptFinish,
+                    selection
                   );
-                  
-  
-                  console.log("SECTOR DATA", sectorData)
-                  if (sectorData && sectorData[0] && sectorData[0].sector) {
-                    //console.log('---- Check ' + sectorData[0].sector + ' ----');
-                    nearestSets =
-                      $settings.ticketsToBuy > 1 &&
-                      !$settings.allowSeparateTickets
-                        ? _getNearestSeats(sectorData, $settings.ticketsToBuy)
-                        : sectorData;
-                    if (nearestSets.length >= $settings.ticketsToBuy) {
-                      //console.log(nearestSets);
-                      nearestSets.map((seat) => {
-                        if ($settings.ticketsToBuy <= _getTicketsInCart()) {scriptFinish= true}
-                        if (!scriptFinish) {
-                          if (reserveTickets(sessionInfo, seat)) {
-                            seatSector = seat.sector;
-                            selection +=
-                              '\n' +
-                              seat.sector +
-                              ' Row: ' +
-                              seat.row.trim() +
-                              ' Seat: ' +
-                              seat.column +
-                              ' €' +
-                              seat.basePrice;
-                          }
-                        }
-                      });
-                      if (selection) {
-                        scriptFinish = true;
-                      }
-                    }
-                  }
                 }
-              }
-            });
-          }
+              });
+            } else {
+              scriptFinish = processSector(
+                sessionInfo,
+                tribuneDataObj.targetView.id,
+                scriptFinish,
+                selection
+              );
+            }
+          });
         });
+        console.log("if (!scriptFinish) ", scriptFinish);
         if (!scriptFinish) {
-          displayTextInBottomLeftCorner('No tickets found!');
-          console.log('No tickets found!');
-          console.log('TIMEOUT 417')
+          displayTextInBottomLeftCorner("No tickets found!");
+          console.log("No tickets found!");
+          console.log("TIMEOUT 417");
           setTimeout(() => {
             //window.location.href = $settings.url;
             _countScriptRunning();
@@ -505,22 +392,19 @@
         } else {
           //_saveCookiesToFile();
           //let cookie = _myCustomGetCookie();
-          let hot = '\uD83D\uDD25';
+          let hot = "\uD83D\uDD25";
           let eventName = sessionInfo.title;
           let message =
             hot +
             eventName +
-            '\n' +
+            "\n" +
             nearestSets.length +
-            ' ticket(s) found!' +
+            " ticket(s) found!" +
             selection;
           _notify(message);
-          window.location.href = $settings.url.replace(
-            'V_blockmap_view',
-            'V_' + seatSector.match(/\d+$/)
-          );
+          window.location.href = $settings.url;
 
-          console.log(nearestSets.length + ' ticket(s) found!');
+          console.log(nearestSets.length + " ticket(s) found!");
           console.log(nearestSets);
           /*
           let urlParts = window.location.href.split('/');
@@ -532,26 +416,103 @@
         */
         }
       } else {
-        console.log('Waiting for Session Info ' + timeoutSum + 'sec!');
+        console.log("Waiting for Session Info " + timeoutSum + "sec!");
         timeoutSum += intervalValue;
       }
       /*}, intervalValue);*/
     } else {
       setTimeout(() => {
         //_notify('Error 500. Automatic restarted!');
-        console.log('TIMEOUT 461')
+        console.log("TIMEOUT 461");
         window.location.href = $settings.indexUrl;
       }, $settings.noDataRestartTimeout * 1000);
     }
   }
 
+  // Helper function to process sector data and reserve tickets
+  function processSector(sessionInfo, targetViewId, scriptFinish, selection) {
+    let sectorsData = getSectorData(sessionInfo, targetViewId);
+    console.log("SECTOR DATA", sectorsData);
+
+    // If there's no data, exit early.
+    if (!sectorsData || sectorsData.length === 0) {
+      return;
+    }
+
+    let subSectorData = [];
+
+    // If the first item has a status property, assume sectorsData is already seat-level.
+    if (sectorsData[0].hasOwnProperty("status")) {
+      subSectorData = sectorsData;
+    } else {
+      // Otherwise, iterate over each sector to get its sub-sector (seat) data.
+      sectorsData.forEach((sectorData) => {
+        // Optionally check if the sector's availability meets the tickets requirement.
+        if (
+          sectorData.targetView &&
+          sectorData.targetView.availability &&
+          sectorData.targetView.availability.available >= $settings.ticketsToBuy
+        ) {
+          let subSector = getSectorData(sessionInfo, sectorData.targetView.id);
+          console.log("SUB SECTOR DATA", subSector);
+          if (subSector && subSector.length > 0) {
+            // Merge the sub-sector (seat) data into our main array.
+            subSectorData = subSectorData.concat(subSector);
+          }
+        }
+      });
+    }
+
+    // If we have no seat data, exit.
+    if (!subSectorData || subSectorData.length === 0) {
+      return;
+    }
+
+    // Determine the seats to reserve.
+    // If multiple tickets are required and separate tickets are not allowed, try to get the nearest seats.
+    // Otherwise, work with the entire subSectorData array.
+    const seats =
+      $settings.ticketsToBuy > 1 && !$settings.allowSeparateTickets
+        ? _getNearestSeats(subSectorData, $settings.ticketsToBuy)
+        : subSectorData;
+
+    // Proceed only if we have enough seats.
+    if (seats.length >= $settings.ticketsToBuy) {
+      seats.forEach((seat) => {
+        if (!scriptFinish && reserveTickets(sessionInfo, seat)) {
+          seatSector = seat?.sector;
+          selection +=
+            "\n" +
+            seat?.sector?.code +
+            " Row: " +
+            seat?.rowName.trim() +
+            " Seat: " +
+            seat?.num +
+            " €" +
+            seat?.basePrice;
+        }
+      });
+      console.log("if scriptFinish and selection ", scriptFinish, selection);
+      if (selection) {
+        scriptFinish = true;
+      }
+      console.log(
+        "after if scriptFinish and selection ",
+        scriptFinish,
+        selection
+      );
+    }
+
+    return scriptFinish;
+  }
+
   function reserveTickets(session, ticketObj) {
     let seats = [];
-    seats.push(ticketObj.databaseId);
+    seats.push({ id: ticketObj.id });
     return _requestAjaxData(
-      'https://tickets.realmadrid.com/api/v2/cart/seats',
+      "https://tickets.realmadrid.com/channels-api/v1/checkout/seats",
       {
-        sessionId: session.id.toString(),
+        sessionId: session.id,
         seats: seats,
       }
     );
@@ -563,30 +524,81 @@
     if (parsedUrl.length >= 2) {
       return parsedUrl[1];
     }
-    throw 'Cant parse ob_channel name!';
+    throw "Cant parse ob_channel name!";
+  }
+
+  function getObChannelId() {
+    let pageType = document.location.href.split(".com/")[1].split("/select")[0];
+    if ($settings.obChannelId) {
+      return $settings.obChannelId;
+    } else {
+      var xhr = new XMLHttpRequest();
+      xhr.open(
+        "GET",
+        `https://tickets.realmadrid.com/channels-api/v1/init-config/${pageType}`,
+        false
+      );
+      try {
+        xhr.send(null);
+        if (xhr.status === 200) {
+          var data = JSON.parse(xhr.responseText);
+          $settings.obChannelId = String(data.id);
+          return $settings.obChannelId;
+        } else {
+          console.error("Error fetching channel ID. Status:", xhr.status);
+          return null;
+        }
+      } catch (err) {
+        console.error("getObChannelId error", err);
+        return null;
+      }
+    }
   }
 
   function getSectorData(session, tribuneDataObj) {
     var resp = _requestAjaxData(
-      'https://tickets.realmadrid.com/api/v1/venues/' +
+      "https://tickets.realmadrid.com/channels-api/v1/catalog/sessions/" +
         session.id +
-        '?actualView=' +
+        "/venue-map" +
+        "?viewId=" +
         tribuneDataObj
     );
-    console.log('RESP', resp)
-    return resp.svgSeatListToSend.filter((item) => {
+    if (resp.element.seats.length != 0) {
+      console.log("getSectorData function !!!!!!!!!!!!", "seats here!!");
+      let result = resp.element.seats.filter((item) => {
+        return item.status === "AVAILABLE";
+      });
+      return result;
+    }
+    let result = resp.element.links.filter((item) => {
       let minPrice = $settings.minPrice;
       let maxPrice = $settings.maxPrice;
-      let minPriceCondition = minPrice ? item.price >= minPrice : true;
-      let maxPriceCondition = maxPrice ? item.price <= maxPrice : true;
-      return item.status != 2 && minPriceCondition && maxPriceCondition;
+      let amount = $settings.ticketsToBuy;
+      let amountCondition = amount
+        ? item.targetView.availability.available >= amount
+        : true;
+      if (!amountCondition) {
+        return false;
+      }
+      let minPriceCondition = minPrice
+        ? item.targetView.price.min.basePrice >= minPrice
+        : true;
+      let maxPriceCondition = maxPrice
+        ? item.targetView.price.min.basePrice <= maxPrice
+        : true;
+
+      let priceCondition = maxPriceCondition && minPriceCondition;
+      return priceCondition && amountCondition;
     });
+    console.log("getSectorData function !!!!!!!!!!!!", result);
+    return result;
   }
 
-  async function receive_sheets_data() {
-    let SHEET_ID = '1TniFrgJi9yJ2eUiCzCRistLUDCzn_v3udrZwhOzmaYI';
-    let SHEET_TITLE = 'main';
-    let SHEET_RANGE = 'A2:O';
+  // Receive data
+  async function receive_sheets_data(input) {
+    let SHEET_ID = "1TniFrgJi9yJ2eUiCzCRistLUDCzn_v3udrZwhOzmaYI";
+    let SHEET_TITLE = "main";
+    let SHEET_RANGE = "A2:O";
 
     let FULL_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?sheet=${SHEET_TITLE}&range=${SHEET_RANGE}`;
 
@@ -602,12 +614,18 @@
       let res = await fetch(FULL_URL);
       let rep = await res.text();
       let data = JSON.parse(rep.substr(47).slice(0, -2));
-      console.log(data);
 
       let data_rows = data.table.rows;
-      let random_row =
-        data_rows[Math.floor(Math.random() * data_rows.length)].c;
-      console.log(random_row);
+
+      let filtered_data = data_rows.filter((item) => {
+        if (item.c[2].v === input) return item.c;
+      });
+      console.log(filtered_data);
+      if (filtered_data.length === 0) {
+        alert("Не владося знайти введену пошту");
+        return null;
+      }
+      let random_row = filtered_data[0].c;
 
       sheets_name = random_row[0].v;
       sheets_surname = random_row[1].v;
@@ -648,61 +666,79 @@
         attendants: attendants,
       };
     } catch (error) {
-      console.error('Error fetching data:', error);
+      console.error("Error fetching data:", error);
       return null;
     }
   }
 
-  function getTribuneData(session, tribuneObj) {
+  function getTribuneData(session, tribuneId) {
     var resp = _requestAjaxData(
-      'https://tickets.realmadrid.com/api/v1/venues/' +
+      "https://tickets.realmadrid.com/channels-api/v1/catalog/sessions/" +
         session.id +
-        '?actualView=' +
-        tribuneObj.target
+        "/venue-map" +
+        "?viewId=" +
+        tribuneId
     );
-    return resp.linkList
+    if (resp.element.seats.length != 0) {
+      console.log("getTribuneData function !!!!!!!!!!!!!!", "seats here!!");
+      return [];
+    }
+    let result = resp.element.links
       .filter((item) => {
-        let condition = item.availability >= $settings.ticketsToBuy;
+        let condition =
+          item.targetView.availability.available >= $settings.ticketsToBuy;
+        console.log(
+          "item.targetView.availability.available >= $settings.ticketsToBuy",
+          condition
+        );
         return condition;
       })
       .filter((item) => {
-        return $settings.maxPrice === null
-          ? true
-          : item.priceMax <= $settings.maxPrice;
+        let condition =
+          $settings.maxPrice === null
+            ? true
+            : item.targetView.price.min.basePrice <= $settings.maxPrice;
+        console.log("minPrice condition", condition);
+        return condition;
       })
       .filter((item) => {
-        return $settings.minPrice === null
-          ? true
-          : item.priceMin >= $settings.minPrice;
+        let condition =
+          $settings.minPrice === null
+            ? true
+            : item.targetView.price.min.basePrice >= $settings.minPrice;
+        console.log("maxPrice condition", condition);
+        return condition;
       })
       .sort((a, b) => {
-        if (a.availability > b.availability) {
+        if (
+          a.targetView.availability.available >
+          b.targetView.availability.avaiable
+        ) {
           return -1;
         }
       });
+    console.log("getTribuneData function !!!!!!!!!!!!!!", result);
+    return result;
   }
 
   function getTribunes(session) {
-    console.log('GET TRIBUNES CALL')
-    var viewCode = new URL(location.href).searchParams.get('viewCode');
-
+    var viewCode = new URL(location.href).searchParams.get("viewCode");
     var resp = _requestAjaxData(
-      'https://tickets.realmadrid.com/api/v1/venues/' +
+      "https://tickets.realmadrid.com/channels-api/v1/catalog/sessions/" +
         session.id +
-        (viewCode ? '?viewCode=' + viewCode : '')
+        "/venue-map" +
+        (viewCode ? "?viewCode=" + viewCode : "")
     );
-    console.log("resp",resp)
-    resp.linkList = resp.linkList.filter((item) => {
-      return item.availability >= $settings.ticketsToBuy; // && minPriceFlag && maxPriceFlag;
+    resp.element.links = resp.element.links.filter((item) => {
+      return item.targetView.availability.available >= $settings.ticketsToBuy; // && minPriceFlag && maxPriceFlag;
     });
-    return resp.linkList;
+    console.log("RESP ELEMENT LINKS!!!!", resp.element.links);
+    return resp.element.links;
   }
 
   function _requestAjaxData(url, post) {
-
-
     let xhr = new XMLHttpRequest();
-    xhr.open(post ? 'POST' : 'GET', url, false);
+    xhr.open(post ? "POST" : "GET", url, false);
 
     let cachedUrl = new URL(url).pathname + new URL(url).search;
 
@@ -711,29 +747,32 @@
         xhr.setRequestHeader(keyName, headerRequests[cachedUrl][keyName]);
       });
     } else {
-      xhr.setRequestHeader('pragma', 'no-cache');
-      xhr.setRequestHeader('cache-control', 'no-cache');
-      xhr.setRequestHeader('ob-channel', getObChannelName());
-      xhr.setRequestHeader('ob-language', 'en_US');
-      xhr.setRequestHeader('x-xsrf-token', _getCookie('XSRF-TOKEN'));
-      xhr.setRequestHeader('accept', 'application/json, text/plain, */*');
-      xhr.setRequestHeader(
-        'if-modified-since',
-        'Sat, 29 Oct 1994 19:43:31 GMT'
-      );
-      if (!Object.keys(obSignatureTemp).length) {
+      xhr.setRequestHeader("pragma", "no-cache");
+      xhr.setRequestHeader("cache-control", "no-cache");
+      xhr.setRequestHeader("ob-channel", getObChannelName());
+      xhr.setRequestHeader("ob-language", "en_US");
+      // xhr.setRequestHeader("x-xsrf-token", _getCookie("XSRF-TOKEN"));
+      xhr.setRequestHeader("accept", "application/json, text/plain, */*");
+      // xhr.setRequestHeader(
+      //   "if-modified-since",
+      //   "Sat, 29 Oct 1994 19:43:31 GMT"
+      // );
+      xhr.setRequestHeader("ob-channel-id", getObChannelId());
+      if (!Object.keys(obSignature).length) {
         xhr.setRequestHeader(
-          'ob-app-trace-id',
+          "ob-app-trace-id",
           Math.random().toString(16).substr(2)
         );
-        xhr.setRequestHeader('ob-timestamp', +new Date());
+        // xhr.setRequestHeader("ob-timestamp", +new Date());
       } else {
-        xhr.setRequestHeader('ob-app-trace-id', obSignature['ob-app-trace-id']);
         xhr.setRequestHeader(
-          'ob-signature-token',
-          obSignature['ob-signature-token']
+          "ob-app-trace-id",
+          localStorage.getItem("user-trace-id")
         );
-        xhr.setRequestHeader('ob-timestamp', obSignature['ob-timestamp']);
+        xhr.setRequestHeader(
+          "ob-session-token",
+          obSignature["ob-session-token"]
+        );
       }
     }
 
@@ -745,7 +784,7 @@
             JSON.parse(this.responseText);
           } catch (e) {
             console.error(
-              'Не вдалося розпарсити відповідь як JSON:',
+              "Не вдалося розпарсити відповідь як JSON:",
               this.responseText
             );
             // Опційно, перенаправлення або інші дії
@@ -757,14 +796,13 @@
     };
 
     if (post) {
-      xhr.setRequestHeader('content-type', 'application/json;charset=UTF-8');
+      xhr.setRequestHeader("content-type", "application/json;charset=UTF-8");
       xhr.send(JSON.stringify(post));
     } else {
       xhr.send();
     }
 
     if (xhr.status != 200) {
-      console.log('TIMEOUT 685')
       setTimeout(() => {
         //_notify('Error ' + xhr.status + '. Automatic restarted!');
         window.location.href = $settings.url;
@@ -777,46 +815,47 @@
   }
 
   function _getCookie(cname) {
-    let name = cname + '=';
+    let name = cname + "=";
     let decodedCookie = decodeURIComponent(document.cookie);
-    let ca = decodedCookie.split(';');
+    let ca = decodedCookie.split(";");
     for (let i = 0; i < ca.length; i++) {
       let c = ca[i];
-      while (c.charAt(0) == ' ') {
+      while (c.charAt(0) == " ") {
         c = c.substring(1);
       }
       if (c.indexOf(name) == 0) {
         return c.substring(name.length, c.length);
       }
     }
-    return '';
+    return "";
   }
 
   /**
    * Filtered only nearest seats
    */
   function _getNearestSeats(tickets, minNearestSeatsCount) {
+    console.log("getNearestSeats function call!!!!!");
     var res = [];
     if (tickets.length > 0) {
       tickets.reduce(function (prev, curr) {
         if ($settings.debug) {
-          console.log(prev.refId, curr.refId, curr.refId - prev.refId);
+          console.log(prev.id, curr.id, curr.id - prev.id);
         }
-        if (prev && curr.refId - prev.refId == 1 && curr.row === prev.row) {
-          res.push(curr.refId);
-          res.push(prev.refId);
+        if (prev && curr.id - prev.id == 1 && curr.rowName === prev.rowName) {
+          res.push(curr.id);
+          res.push(prev.id);
 
           if (res.length === minNearestSeatsCount) {
             // Повертаємо спеціальне значення, щоб перервати reduce
-            return Symbol('stop');
+            return Symbol("stop");
           }
         } else if (
           prev &&
-          curr.refId - prev.refId == 2 &&
-          curr.row === prev.row
+          curr.id - prev.id == 2 &&
+          curr.rowName === prev.rowName
         ) {
-          res.push(curr.refId);
-          res.push(prev.refId);
+          res.push(curr.id);
+          res.push(prev.id);
         } else {
           if (res.length < minNearestSeatsCount) {
             res = [];
@@ -826,7 +865,7 @@
       }, null); // Додавання другого аргументу, щоб визначити початкове значення `prev`
       let nearestSeatsIndexes = res;
       return tickets.filter((item) => {
-        return nearestSeatsIndexes.includes(item.refId);
+        return nearestSeatsIndexes.includes(item.id);
       });
     }
     return [];
@@ -835,16 +874,16 @@
    * Method returns setting for the bot
    */
   function _getSettings() {
-    console.log("Settings",window.localStorage.ticketBotSettings)
+    console.log("Settings", window.localStorage.ticketBotSettings);
     let settings = unsafeWindow.ticketBotSettings || null;
     if (settings === null) {
-      settings = JSON.parse(window.localStorage.ticketBotSettings)
+      settings = JSON.parse(window.localStorage.ticketBotSettings);
     }
-    if (!settings || typeof settings !== 'object') {
+    if (!settings || typeof settings !== "object") {
       return null;
     }
     return {
-      chromeProfile: settings.chromeProfile || 'undefined',
+      chromeProfile: settings.chromeProfile || "undefined",
       indexUrl: settings.indexUrl || null,
       url: settings.url || null,
 
@@ -866,39 +905,29 @@
           : settings.secondsToRestartIfNoTicketsFound,
       madridista: settings.madridista || null,
       needSectorArray: settings.needSectorArray || null,
+      obChannelId: settings.obChannelId || null,
     };
-  }
-
-  function _getTicketsInCart() {
-    let url = window.location.href;
-    let eventType = url.split('tickets.realmadrid.com/')[1].split('/')[0]
-    let dataRaw = sessionStorage.getItem(`ngStorage-trackingInfo_${eventType}`);
-    let data = JSON.parse(dataRaw);
-    console.log('SESSION STORAGE', data);
-    let cartTickets = data?.cart?.items;
-    console.log(cartTickets, "CART TICKETS");
-    return cartTickets !== undefined && cartTickets !== null ? cartTickets.length : 0;
   }
 
   /**
    * Count how many times script was runned
    */
   function _countScriptRunning() {
-    let ticketCatcherCounter = GM_getValue('RealTicketCatcherCounter', 1);
+    let ticketCatcherCounter = GM_getValue("RealTicketCatcherCounter", 1);
     console.log(
       'Script "' +
         GM.info.script.name +
         '" has been run ' +
         ticketCatcherCounter +
-        ' times from ' +
+        " times from " +
         $settings.timesToBrowserTabReload +
-        '.'
+        "."
     );
     if (ticketCatcherCounter >= $settings.timesToBrowserTabReload) {
-      GM_setValue('RealTicketCatcherCounter', 0);
+      GM_setValue("RealTicketCatcherCounter", 0);
       _restartTab();
     } else {
-      GM_setValue('RealTicketCatcherCounter', ++ticketCatcherCounter);
+      GM_setValue("RealTicketCatcherCounter", ++ticketCatcherCounter);
     }
   }
 
@@ -928,17 +957,17 @@ getcookie func
 
   function _myCustomGetCookie() {
     const cookiesString = document.cookie;
-    const cookiesArray = cookiesString.split(';').map((cookie) => {
-      const [name, value] = cookie.trim().split('=');
+    const cookiesArray = cookiesString.split(";").map((cookie) => {
+      const [name, value] = cookie.trim().split("=");
       return {
         name,
         value,
-        domain: '.realmadrid.com', // замініть на ваш домен
-        path: '/',
+        domain: ".realmadrid.com", // замініть на ваш домен
+        path: "/",
         expirationDate: Math.floor(Date.now() / 1000) + 365 * 24 * 60 * 60, // припустимо, що кука дійсна протягом року
         httpOnly: false, // адаптуйте налаштування за потребою
         secure: false, // адаптуйте налаштування за потребою
-        sameSite: 'unspecified', // адаптуйте налаштування за потребою
+        sameSite: "unspecified", // адаптуйте налаштування за потребою
       };
     });
     return JSON.stringify(cookiesArray, null, 2);
@@ -952,15 +981,15 @@ getcookie func
     const formattedCookies = _myCustomGetCookie();
 
     // Зберегти куки в локальному сховищі
-    localStorage.setItem('formattedCookies', formattedCookies);
+    localStorage.setItem("formattedCookies", formattedCookies);
 
     // Створити текстовий файл
-    const blob = new Blob([formattedCookies], { type: 'text/plain' });
+    const blob = new Blob([formattedCookies], { type: "text/plain" });
 
     // Створити посилання для завантаження файлу
-    const link = document.createElement('a');
+    const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
-    link.download = 'cookies.txt';
+    link.download = "cookies.txt";
 
     // Додати посилання на сторінку і спровокувати клік для завантаження файлу
     document.body.appendChild(link);
@@ -970,7 +999,7 @@ getcookie func
     document.body.removeChild(link);
 
     // Очистити локальне сховище
-    localStorage.removeItem('formattedCookies');
+    localStorage.removeItem("formattedCookies");
   }
 
   // Викликати функцію для збереження куки у файл
@@ -979,61 +1008,88 @@ getcookie func
   //  Send notification to Telegram Bot
 
   function _notify(message, debugOnly = false) {
-    const serverUrl = 'http://localhost:3309/sendTelegramMessage';
+    const serverUrl = "http://localhost:3309/sendTelegramMessage";
 
     const data = {
       message: message,
       telegramBotToken: $settings.telegramBotId,
       chatId: $settings.telegramBotChatId,
-      botName: '<RealBot>',
+      botName: "<RealBot>",
       chromeProfile: $settings.chromeProfile,
     };
 
     fetch(serverUrl, {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       },
       body: JSON.stringify(data),
     })
       .then((response) => response.json())
       .then((data) => {
-        console.log('Server response:', data);
+        console.log("Server response:", data);
       })
       .catch((error) => {
-        console.error('Error:', error);
+        console.error("Error:", error);
+      });
+  }
+
+  function _notify_error(message, debugOnly = false) {
+    const serverUrl = "http://localhost:3309/sendTelegramMessage";
+
+    const data = {
+      message: message,
+      telegramBotToken: $settings.telegramBotId,
+      chatId: $settings.telegramBotChatErrorsId,
+      botName: "<RealBot>",
+      chromeProfile: $settings.chromeProfile,
+    };
+
+    fetch(serverUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(data),
+    })
+      .then((response) => response.json())
+      .then((data) => {
+        console.log("Server response:", data);
+      })
+      .catch((error) => {
+        console.error("Error:", error);
       });
   }
 
   //   Send notification to Telegram Bot cookie
 
   function _notifyCookie() {
-    let botName = 'RealBot coockie';
+    let botName = "RealBot coockie";
     let telegramBotChatDebugId = 741577;
     let chatId = _isProduction()
       ? $settings.telegramBotChatId
       : telegramBotChatDebugId;
 
     let url =
-      'https://api.telegram.org/bot' +
+      "https://api.telegram.org/bot" +
       $settings.telegramBotId +
-      '/sendDocument';
+      "/sendDocument";
     let formData = new FormData();
-    formData.append('chat_id', chatId);
+    formData.append("chat_id", chatId);
     formData.append(
-      'document',
-      new Blob([_myCustomGetCookie()], { type: 'text/plain' }),
-      'cookies.txt'
+      "document",
+      new Blob([_myCustomGetCookie()], { type: "text/plain" }),
+      "cookies.txt"
     );
-    formData.append('caption', `<${botName}> ${$settings.chromeProfile}`);
+    formData.append("caption", `<${botName}> ${$settings.chromeProfile}`);
 
     fetch(url, {
-      method: 'POST',
+      method: "POST",
       body: formData,
     })
       .then((response) => {
         if (!response.ok) {
-          throw new Error('Network response was not ok');
+          throw new Error("Network response was not ok");
         }
         return response.json();
       })
@@ -1041,7 +1097,7 @@ getcookie func
         console.log(data);
       })
       .catch((error) => {
-        console.error('Error:', error);
+        console.error("Error:", error);
       });
   }
 
@@ -1090,7 +1146,7 @@ getcookie func
    * Restart browser tab to clean memory
    */
   function _restartTab() {
-    console.log($settings.login + ': Restarting browser tab...');
+    console.log($settings.login + ": Restarting browser tab...");
     GM_openInTab(window.location.href, { active: false, insert: true });
     // close the current window some ms later to allow the insert magic to detect this' tab position
     setTimeout(window.close, 1);
@@ -1126,7 +1182,7 @@ getcookie func
 
   // Функція для отримання поточного часу у форматі "ГГ:ХХ:СС"
   function displayTextInBottomLeftCorner(text) {
-    const existingTextElement = document.getElementById('bottomLeftText');
+    const existingTextElement = document.getElementById("bottomLeftText");
 
     // Функція для форматування чисел менше 10 з додаванням "0" спереду
     function formatNumber(num) {
@@ -1144,17 +1200,17 @@ getcookie func
 
     if (!existingTextElement) {
       // Створюємо елемент, якщо він ще не існує
-      const newTextElement = document.createElement('div');
-      newTextElement.id = 'bottomLeftText';
+      const newTextElement = document.createElement("div");
+      newTextElement.id = "bottomLeftText";
 
       // Стилі для новоствореного елементу
-      newTextElement.style.position = 'absolute';
-      newTextElement.style.bottom = '0';
-      newTextElement.style.left = '0';
-      newTextElement.style.padding = '10px';
-      newTextElement.style.backgroundColor = '#000';
-      newTextElement.style.color = '#fff';
-      newTextElement.style.fontFamily = 'Arial, sans-serif';
+      newTextElement.style.position = "absolute";
+      newTextElement.style.bottom = "0";
+      newTextElement.style.left = "0";
+      newTextElement.style.padding = "10px";
+      newTextElement.style.backgroundColor = "#000";
+      newTextElement.style.color = "#fff";
+      newTextElement.style.fontFamily = "Arial, sans-serif";
 
       // Додаємо новостворений елемент до body
       document.body.appendChild(newTextElement);
@@ -1170,17 +1226,17 @@ getcookie func
   function findElementAndSimulateClick() {
     setInterval(() => {
       const element = document.querySelector(
-        'a.button.primary.expand.ng-binding'
+        "a.button.primary.expand.ng-binding"
       );
 
       if (element) {
-        console.log('Елемент знайдено:', element);
+        console.log("Елемент знайдено:", element);
 
         // Емуляція кліку на знайденому елементі
         element.click();
-        console.log('Емульований клік викликав функцію.');
+        console.log("Емульований клік викликав функцію.");
       } else {
-        console.log('Елемент не знайдено. Продовжуємо пошук.');
+        console.log("Елемент не знайдено. Продовжуємо пошук.");
       }
     }, 20000); // Інтервал у мілісекундах (20 секунд)
   }
@@ -1188,52 +1244,51 @@ getcookie func
   // Запускаємо функцію
   findElementAndSimulateClick();
 
-  function sleep(ms) {
-    return new Promise((resolve) => setTimeout(resolve, ms));
-  }
-
   (function () {
     // Create autofill button
-    const button = document.createElement('button');
-    button.textContent = 'Fill Data';
+    const button = document.createElement("button");
+    button.textContent = "Fill Data";
 
     // Apply styles to the button
-    button.style.backgroundColor = '#007bff';
-    button.style.color = 'white';
-    button.style.border = 'none';
-    button.style.padding = '5px 10px';
-    button.style.borderRadius = '5px';
-    button.style.fontSize = '16px';
-    button.style.cursor = 'pointer';
-    button.style.transform = 'rotate(90deg)';
-    button.style.position = 'absolute';
-    button.style.top = '50%';
-    button.style.right = '0px';
-    button.style.transform = 'translateY(-50%) rotate(90deg)';
+    button.style.backgroundColor = "#007bff";
+    button.style.color = "white";
+    button.style.border = "none";
+    button.style.padding = "5px 10px";
+    button.style.borderRadius = "5px";
+    button.style.fontSize = "16px";
+    button.style.cursor = "pointer";
+    button.style.transform = "rotate(90deg)";
+    button.style.position = "absolute";
+    button.style.top = "50%";
+    button.style.left = "-25px";
+    button.style.zIndex = "9999";
+    button.style.transform = "translateY(-50%) rotate(90deg)";
 
     // Apply positioning styles to the body
-    document.body.style.margin = '0';
-    document.body.style.height = '100vh';
-    document.body.style.position = 'relative';
-    document.body.style.backgroundColor = '#f0f0f0';
+    document.body.style.margin = "0";
+    document.body.style.height = "100vh";
+    document.body.style.position = "relative";
+    document.body.style.backgroundColor = "#f0f0f0";
 
     // Add click event listener
-    button.addEventListener('click', function () {
-      fill_data();
+    button.addEventListener("click", function () {
+      const alertData = prompt("Ввведіть необхідну пошту");
+      fill_data(alertData);
     });
 
     // Append button to body
     document.body.appendChild(button);
   })();
 
-  async function fill_data() {
+  async function fill_data(alertData) {
     setTimeout(() => {
-      const summary = document.querySelector('#selection-summary');
-      console.log(summary);
-      if (summary) {
-        receive_sheets_data().then((data) => {
-          console.log('data', data.sheets_name);
+      const summary = document.querySelector("#selection-summary");
 
+      if (summary) {
+        receive_sheets_data(alertData).then((data) => {
+          if (!data) {
+            return;
+          }
           const firstNameInput = document.querySelector(
             'input[name="firstName"]'
           );
@@ -1268,7 +1323,7 @@ getcookie func
             telephoneInput,
             postalCodeInput,
           ].forEach((input) => {
-            input.dispatchEvent(new Event('input', { bubbles: true }));
+            input.dispatchEvent(new Event("input", { bubbles: true }));
           });
 
           // Handle up to 4 attendants
@@ -1294,31 +1349,100 @@ getcookie func
                 attendantSurnameInputs[i],
                 attendantIdInputs[i],
               ].forEach((input) => {
-                input.dispatchEvent(new Event('input', { bubbles: true }));
+                input.dispatchEvent(new Event("input", { bubbles: true }));
               });
             }
           }
 
+          const selectCountryCode = document.querySelector(
+            'select[name="countryCode"]'
+          );
+
+          selectCountryCode.options[1].selected = true;
+
+          const changeEvent = new Event("change", { bubbles: true });
+          selectCountryCode.dispatchEvent(changeEvent);
+
           // Check the required checkboxes
-          document.querySelector('input[name="acceptTermsAndConds"]').click();
-          document.querySelector('input[name="channelAgreement-158"]').click();
+          const acceptTermsCheckbox = document.querySelector(
+            'input[name="acceptTermsAndConds"]'
+          );
+          const channelAgreementCheckbox = document.querySelector(
+            'input[name="channelAgreement-158"]'
+          );
+
+          if (!acceptTermsCheckbox.checked) {
+            acceptTermsCheckbox.click();
+          }
+
+          if (!channelAgreementCheckbox.checked) {
+            channelAgreementCheckbox.click();
+          }
         });
       }
     }, 2000);
   }
 
+  function notFoundHandler() {
+    let attempt = 0;
+    const interval = setInterval(() => {
+      if (
+        _xpath("//*[contains(text(), '404 Not Found')]", window.document)
+          .length > 0 &&
+        attempt < 1
+      ) {
+        attempt += 1;
+        _notify_error(
+          "З'явилась помилка 404, потрібно змінити проксі або оновити сторінку"
+        );
+        setTimeout(() => {
+          window.location.reload();
+        }, 600000);
+
+        clearInterval(interval);
+      }
+    }, 2000);
+  }
+
+  notFoundHandler();
+
+  function banHandler() {
+    let attempt = 0;
+    const interval = setInterval(() => {
+      if (
+        _xpath(
+          "//*[contains(text(), 'Sorry, you have been blocked')]",
+          window.document
+        ).length > 0 &&
+        attempt < 1
+      ) {
+        attempt += 1;
+        _notify_error(
+          "Браузер забанений, потрібно змінити проксі або оновити сторінку (403)"
+        );
+        setTimeout(() => {
+          window.location.href = $settings.url;
+        }, 600000);
+
+        clearInterval(interval);
+      }
+    }, 2000);
+  }
+
+  banHandler();
+
   function findCookieElementAndSimulateClick() {
     setInterval(() => {
-      const element = document.querySelector('button.primary.cookie-button');
+      const element = document.querySelector("button.primary.cookie-button");
 
       if (element) {
-        console.log('Елемент знайдено:', element);
+        console.log("Елемент знайдено:", element);
 
         // Емуляція кліку на знайденому елементі
         element.click();
-        console.log('Емульований клік викликав функцію.');
+        console.log("Емульований клік викликав функцію.");
       } else {
-        console.log('Елемент не знайдено. Продовжуємо пошук.');
+        console.log("Елемент не знайдено. Продовжуємо пошук.");
       }
     }, 20000); // Інтервал у мілісекундах (20 секунд)
   }
