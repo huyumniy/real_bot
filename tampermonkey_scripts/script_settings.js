@@ -106,7 +106,7 @@ function updateSettings() {
   settings.production = true;
   settings.debug = false;
   settings.reload = true;
-  settings.secondsToRestartIfNoTicketsFound = 5;
+  settings.secondsToRestartIfNoTicketsFound = 15;
   settings.timesToBrowserTabReload = 200;
   settings.madridista = { login: "222222", password: "2222222" } && null; // To disable this parameter uncomment && null
   console.log("Updated settings:", settings);
