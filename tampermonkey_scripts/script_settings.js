@@ -18,6 +18,7 @@ let settings = storedSettings || {
   url: getSessionUrl(),
   allowSeparateTickets: false,
   telegramBotId: "5712671465:AAFqebxudxqEcGp2SZm814vR8RtTKLgEjGs",
+  // telegramBotChatId: -1001629247382,
   telegramBotChatId: -1001961554005,
   telegramBotChatErrorsId: -4572872479,
   production: true,
@@ -86,6 +87,7 @@ function createForm() {
   settingsFormContainer.style.border = "1px solid #ccc";
 }
 function updateSettings() {
+  sessionStorage.clear();
   const minPrice = document.getElementById("minPrice").value;
   const maxPrice = document.getElementById("maxPrice").value;
   const ticketsToBuy = parseInt(document.getElementById("ticketsToBuy").value);
@@ -136,7 +138,7 @@ function getSessionUrl() {
 
     // Build the URL based on the event type
     let result = eventType
-      ? `https://tickets.realmadrid.com/${eventType}/select/${sessionNumber}?viewCode=V_principal`
+      ? `https://tickets.realmadrid.com/${eventType}/select/${sessionNumber}?viewCode=V_blockmap_view`
       : null;
     return result;
   }
