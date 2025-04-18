@@ -287,13 +287,42 @@
       } else {
         let myObject = JSON.parse(myObjectString);
         let itemsQuantity = myObject?.order?.items?.length || 0;
+        // console.log(myObject.order.items, "GOVNINAINIASDFNASDFNIASDF");
 
         if (itemsQuantity >= $settings.ticketsToBuy) {
+          
+          let selection = ""; 
+          myObject.order.items.map((seat => {
+            selection +=
+            "\n" +
+            seat?.allocation?.sector.name +
+            " Row: " +
+            seat?.allocation?.rowName.trim() +
+            " Seat: " +
+            seat?.allocation?.seatName +
+            " €" +
+            seat?.price?.base.toString()
+          }));
+
+          let hot = "\uD83D\uDD25";
+          let eventName = myObject.channel.name;
+          let message =
+            hot +
+            eventName +
+            "\n" +
+            itemsQuantity +
+            " ticket(s) found!" +
+            selection;
+          _notify(message);
+          
+          console.log( itemsQuantity + " ticket(s) found!");
+          console.log( itemsQuantity);
+
+
+          _notify("Seats reserved!");
           alert(
             "Seats already reserved! Please delete them to start new search!"
           );
-          _notify("Seats reserved!");
-          throw "Seats already reserved! Please delete them to start new search!";
           return;
         }
       }
@@ -365,7 +394,8 @@
                     sessionInfo,
                     subTribune.targetView.id,
                     scriptFinish,
-                    selection
+                    selection,
+                    myObjectString
                   );
                 }
               });
@@ -374,7 +404,8 @@
                 sessionInfo,
                 tribuneDataObj.targetView.id,
                 scriptFinish,
-                selection
+                selection,
+                myObjectString
               );
             }
           });
@@ -390,30 +421,7 @@
             _init();
           }, $settings.noDataRestartTimeout * 1000);
         } else {
-          //_saveCookiesToFile();
-          //let cookie = _myCustomGetCookie();
-          let hot = "\uD83D\uDD25";
-          let eventName = sessionInfo.title;
-          let message =
-            hot +
-            eventName +
-            "\n" +
-            nearestSets.length +
-            " ticket(s) found!" +
-            selection;
-          _notify(message);
           window.location.href = $settings.url;
-
-          console.log(nearestSets.length + " ticket(s) found!");
-          console.log(nearestSets);
-          /*
-          let urlParts = window.location.href.split('/');
-          let base_url = urlParts.slice(0, 10).join('/');
-          let summary_url = base_url + '/' + 'buying-process/user-data';
-          window.location.href = summary_url;
-
-          fill_data();
-        */
         }
       } else {
         console.log("Waiting for Session Info " + timeoutSum + "sec!");
@@ -430,7 +438,7 @@
   }
 
   // Helper function to process sector data and reserve tickets
-  function processSector(sessionInfo, targetViewId, scriptFinish, selection) {
+  function processSector(sessionInfo, targetViewId, scriptFinish, selection, myObjectString) {
     let sectorsData = getSectorData(sessionInfo, targetViewId);
     console.log("SECTOR DATA", sectorsData);
 
@@ -475,32 +483,18 @@
       $settings.ticketsToBuy > 1 && !$settings.allowSeparateTickets
         ? _getNearestSeats(subSectorData, $settings.ticketsToBuy)
         : subSectorData;
-
+    areSeatsFound = false;
     // Proceed only if we have enough seats.
     if (seats.length >= $settings.ticketsToBuy) {
       seats.forEach((seat) => {
         if (!scriptFinish && reserveTickets(sessionInfo, seat)) {
-          seatSector = seat?.sector;
-          selection +=
-            "\n" +
-            seat?.sector?.code +
-            " Row: " +
-            seat?.rowName.trim() +
-            " Seat: " +
-            seat?.num +
-            " €" +
-            seat?.basePrice;
+          areSeatsFound = true;
         }
       });
-      console.log("if scriptFinish and selection ", scriptFinish, selection);
-      if (selection) {
+      
+      if (areSeatsFound) {
         scriptFinish = true;
       }
-      console.log(
-        "after if scriptFinish and selection ",
-        scriptFinish,
-        selection
-      );
     }
 
     return scriptFinish;
