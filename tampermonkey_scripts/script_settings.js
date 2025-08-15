@@ -17,7 +17,6 @@ let settings = storedSettings || {
   indexUrl: "https://www.realmadrid.com/en/tickets",
   url: getSessionUrl(),
   allowSeparateTickets: false,
-  telegramBotId: "5712671465:AAFqebxudxqEcGp2SZm814vR8RtTKLgEjGs",
   // telegramBotChatId: -1001629247382,
   telegramBotChatId: -1001961554005,
   telegramBotChatErrorsId: -4572872479,
@@ -102,7 +101,6 @@ function updateSettings() {
   settings.url = getSessionUrl();
 
   settings.allowSeparateTickets = false;
-  settings.telegramBotId = "5712671465:AAFqebxudxqEcGp2SZm814vR8RtTKLgEjGs";
   settings.telegramBotChatId = -1001961554005;
   settings.telegramBotChatErrorsId = -4572872479;
   settings.production = true;
