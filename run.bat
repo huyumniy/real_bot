@@ -1,6 +1,6 @@
 @echo off
 
 call Scripts\activate.bat
-python test.py
+python main.py
 
 pause

@@ -213,7 +213,7 @@
   _countScriptRunning();
 
   unsafeWindow.document.arrive(
-    "#mmc-venue-viewer",
+    "#ob-channels-venue-viewer",
     { onceOnly: true },
     function (newElem) {
       _init();
@@ -278,7 +278,7 @@
         myObjectStringCopa ||
         myObjectStringSilver ||
         myObjectStringGold;
-
+      console.log("MY OBJECT STRING", myObjectString)
       if (!myObjectString) {
         alert("no myObjectString found");
         // Відповідна рядок JSON не знайдена в sessionStorage
@@ -350,6 +350,7 @@
         "https://tickets.realmadrid.com/channels-api/v1/catalog/sessions/" +
           session_id
       );
+      console.log(sessionInfo, "SESSION INFO!!!")
 
       if (sessionInfo) {
         //clearInterval(intHandler);
@@ -357,7 +358,7 @@
         var nearestSets = [];
         let scriptFinish = false;
         let selection = "";
-
+        
         getTribunes(sessionInfo).forEach((tribune) => {
           console.log(
             "===========================TRIBUNE=================",

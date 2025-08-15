@@ -169,7 +169,8 @@ function getSessionNumberFromUrl(url) {
 }
 
 function extractSessionNumber(url, urlPattern) {
-  const sessionNumber = url.substring(urlPattern.length).split("/")[0];
+  let sessionNumber = url.substring(urlPattern.length).split("/")[0];
+  if (!sessionNumber) sessionNumber = url.substring(urlPattern.length).split("?")[0];
   return sessionNumber;
 }
 

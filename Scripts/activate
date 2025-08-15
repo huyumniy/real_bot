@@ -38,7 +38,7 @@ deactivate () {
 # unset irrelevant variables
 deactivate nondestructive
 
-VIRTUAL_ENV="C:\Users\S3U2\Desktop\S3U2\CloudflareBypassForScraping_S3"
+VIRTUAL_ENV="C:\Users\Влад\Desktop\work\real_bot"
 export VIRTUAL_ENV
 
 _OLD_VIRTUAL_PATH="$PATH"
@@ -55,9 +55,9 @@ fi
 
 if [ -z "${VIRTUAL_ENV_DISABLE_PROMPT:-}" ] ; then
     _OLD_VIRTUAL_PS1="${PS1:-}"
-    PS1="(CloudflareBypassForScraping_S3) ${PS1:-}"
+    PS1="(real_bot) ${PS1:-}"
     export PS1
-    VIRTUAL_ENV_PROMPT="(CloudflareBypassForScraping_S3) "
+    VIRTUAL_ENV_PROMPT="(real_bot) "
     export VIRTUAL_ENV_PROMPT
 fi
 
