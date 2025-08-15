@@ -278,7 +278,7 @@
         myObjectStringCopa ||
         myObjectStringSilver ||
         myObjectStringGold;
-      console.log("MY OBJECT STRING", myObjectString)
+      
       if (!myObjectString) {
         alert("no myObjectString found");
         // Відповідна рядок JSON не знайдена в sessionStorage
@@ -350,7 +350,6 @@
         "https://tickets.realmadrid.com/channels-api/v1/catalog/sessions/" +
           session_id
       );
-      console.log(sessionInfo, "SESSION INFO!!!")
 
       if (sessionInfo) {
         //clearInterval(intHandler);
