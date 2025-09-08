@@ -288,7 +288,7 @@ def worker(thread_num, initialUrl, serverName, serverPort, isNopeCha, browsersAm
         tampermonkey_id = [extension['id'] for extension in extensions if "Tampermonkey" in extension['name']]
 
         path_to_script = f'script_settings.js'
-        script_raw = read_tampermonkey_script(path_to_script)
+        script_settings = read_tampermonkey_script(path_to_script)
         path_to_main_script = f'main_script.js'
         script_main_raw = read_tampermonkey_script(path_to_main_script)
         script = re.sub(r'(?<=localhost:)(\d+)?(?=/)', str(serverPort), script_main_raw)
@@ -304,15 +304,15 @@ def worker(thread_num, initialUrl, serverName, serverPort, isNopeCha, browsersAm
         print(new_chrome_profile)
         # Use regex to replace the chromeProfile value in the JS string
         script = re.sub(
-            r"chromeProfile:\s*'(.*?)'",  # Matches "chromeProfile: 'value'"
-            f"chromeProfile: '{new_chrome_profile}'",  # Replace with new profile
-            script_raw
+            r'(\bchromeProfile\s*:\s*)(["\'])(.*?)\2',
+            rf'\1"\g<3>"'.replace('\g<3>', new_chrome_profile),
+            script_settings
         )
 
-        # Replace `chromeProfile` in the assignment
+        # 2) Replace assignment value (works with " or ')
         script = re.sub(
-            r"settings\.chromeProfile\s*=\s*'(.*?)'",  # Matches "settings.chromeProfile = 'value'"
-            f"settings.chromeProfile = '{new_chrome_profile}'",  # Replace with new profile
+            r'(\bsettings\.chromeProfile\s*=\s*)(["\'])(.*?)\2',
+            rf'\1"\g<3>"'.replace('\g<3>', new_chrome_profile),
             script
         )
         save_tampermonkey_script(path_to_settings_script, script)
@@ -350,12 +350,26 @@ def worker(thread_num, initialUrl, serverName, serverPort, isNopeCha, browsersAm
             ok_button = driver.ele('xpath://*[@id="addProxyOK"]')
             ok_button.click()
             time.sleep(1)
-            proxy_switch_list = driver.eles('css:#proxySelectDiv > div > div > ul > li')
-            proxy_switch_list[random.randint(2, len(proxy_switch_list) - 1)].click()
+            deadline = time.time() + 10  # up to 10s total
+            proxy_switch_list = []
+            while time.time() < deadline:
+                proxy_switch_list = driver.eles('css:#proxySelectDiv > div > div > ul > li')
+                if len(proxy_switch_list) >= 3:
+                    break
+                time.sleep(0.5)
+
+            n = len(proxy_switch_list)
+            if n == 0:
+                logging.error("No proxy entries found in BP Proxy Switcher. Check that 'proxyList' was entered and saved.")
+                
+            else:
+                candidates = proxy_switch_list[2:] if n >= 3 else proxy_switch_list
+                choice = random.choice(candidates)  # always safe: never empty because n>0 here
+                choice.click()
             time.sleep(5)
             proxy_auto_reload_checkbox = driver.ele('xpath://*[@id="autoReload"]')
             proxy_auto_reload_checkbox.click()
-            time.sleep(10)
+            time.sleep(60)
         if isVpn:
             connect_vpn(driver)
         if isNopeCha == 'nopecha':
@@ -548,7 +562,7 @@ def main(initialUrl, serverName, serverPort, isNopeCha, browsersAmount, proxyLis
     if not adspower_api and not adspower_ids:
         threads = []
         for i in range(1, int(browsersAmount)+1):  # Example: 3 threads, modify as needed
-            # if i!= 1: time.sleep(i*30)
+            if i!= 1: time.sleep(i*15)
             thread = threading.Thread(target=worker, args=(i, initialUrl, serverName, serverPort, isNopeCha, browsersAmount, proxyList, isMadridista, numero, contrasena, isVpn))
             threads.append(thread)
             thread.start()
@@ -557,9 +571,9 @@ def main(initialUrl, serverName, serverPort, isNopeCha, browsersAmount, proxyLis
             thread.join()
     else:
         threads = []
-        for i, adspower_id in enumerate(adspower_ids):
-            if i+1!=1: time.sleep(i+1*30)
-            thread = threading.Thread(target=worker, args=(i+1, initialUrl, adspower_id, serverPort, isNopeCha, browsersAmount, proxyList, isMadridista, numero, contrasena, isVpn, adspower_api, adspower_id))
+        for i, adspower_id in enumerate(adspower_ids, 1):
+            if i!=1: time.sleep(i*15)
+            thread = threading.Thread(target=worker, args=(i, initialUrl, adspower_id, serverPort, isNopeCha, browsersAmount, proxyList, isMadridista, numero, contrasena, isVpn, adspower_api, adspower_id))
             threads.append(thread)
             thread.start()
 

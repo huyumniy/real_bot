@@ -16,10 +16,6 @@
             <h3>Initial Url</h3>
             <input type="text" id="initialUrl" name="initialUrl" placeholder="https://example.com">
         </div>
-        <div class="inputs">
-            <h3>Server port</h3>
-            <input type="text" id="serverPort" name="serverPort" placeholder="3309">
-        </div>
         <div class="absolute-checkbox">
             <label for="useAdspower">Use adspower?</label>
             <input type="checkbox" id="useAdspower" name="useAdspower">
@@ -27,10 +23,6 @@
         <div id="adspowerApiContainer" style="display: none;">
             <h3>Adspower API</h3>
             <input type="text" id="adspowerApi" name="AdspowerApi" placeholder="http://local.adspower.net:50325">
-        </div>
-        <div id="serverNameContainer" class="inputs">
-            <h3>Server Name</h3>
-            <input type="text" id="serverName" name="serverName" placeholder="S3U1 (Пушкіна)">
         </div>
         <div id="browserAmountContainer" class="inputs">
             <h3>Browsers amount</h3>
@@ -147,9 +139,6 @@
                 
                 // Collect all input values
                 const initialUrl = document.querySelector('#initialUrl').value;
-                let serverPortRaw = document.querySelector('#serverPort').value;
-                const serverPort = serverPortRaw.trim()
-                const serverName = document.querySelector('#serverName').value;
                 const browsersAmount = document.querySelector('#browserAmount').value;
                 const captchaSolver = document.querySelector('input[name="captchaSolver"]:checked').value;
                 const proxyInput = document.querySelector('textarea[name="proxyInput"]').value;
@@ -172,8 +161,6 @@
                 // Log or send data to the backend
                 console.log({
                     initialUrl,
-                    serverPort,
-                    serverName,
                     browsersAmount,
                     captchaSolver,
                     proxyInput,
@@ -186,7 +173,7 @@
                 });
 
                 // Trigger Eel backend call with new parameters
-                await eel.main(initialUrl, serverName, serverPort, captchaSolver, browsersAmount, proxyInput, isMadridista, numero, contrasena, isVpn, adspowerApi, adspowerIds)();
+                await eel.main(initialUrl, captchaSolver, browsersAmount, proxyInput, isMadridista, numero, contrasena, isVpn, adspowerApi, adspowerIds)();
 
                 // Close window after starting
                 closeWindow();
