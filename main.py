@@ -6,6 +6,7 @@ import requests
 from colorama import init, Fore
 from nodriver import Tab, cdp, Element, Browser, start
 from nodriver.core import element
+from nodriver.cdp.dom import Node
 import threading
 import random
 import json
