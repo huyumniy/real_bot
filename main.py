@@ -228,7 +228,6 @@ def is_port_open(host, port):
 
 
 if __name__ == "__main__":
-    
     eel.init('web')
     
     port = 8001
