@@ -1,4 +1,4 @@
-#!C:\Users\Влад\Desktop\work\real_bot\Scripts\python.exe
+#!D:\work\real_bot\Scripts\python.exe
 # -*- coding: utf-8 -*-
 from __future__ import print_function
 """

@@ -5,6 +5,10 @@ import random
 import requests
 from pprint import pprint
 from .helpers import save_js_script, read_js_script
+from nodriver import Tab, Element, Browser
+from nodriver.core import element
+from nodriver.cdp.dom import Node
+from utils.helpers import log_line
 import re
 
 
@@ -242,9 +246,12 @@ async def wait_for_elements(page, selector, timeout=10):
     return False
     
 
-async def check_for_element(page, selector, click=False, debug=False):
+async def check_for_element(page, selector, xpath=False, click=False, debug=False):
     try:
-        element = await page.query_selector(selector)
+        if xpath:
+            element = await page.xpath(selector)
+        else:
+            element = await page.query_selector(selector)
         if click:
             await element.click()
         return element
@@ -271,3 +278,42 @@ def get_extension_id_by_name(extensions, name):
                     if k == "id":
                         return v["value"]
     return None
+
+
+def switch_frame(browser, iframe) -> Tab:
+    iframe: Tab = next(
+        filter(
+            lambda x: str(x.target.target_id) == str(iframe.frame_id), browser.targets
+        )
+    )
+    iframe.websocket_url = iframe.websocket_url.replace("iframe", "page")
+    return iframe
+
+
+async def click_verify(browser: Browser, tab: Tab):
+    try:
+
+        div_host: Element = await check_for_element(tab, 'div[style="display: grid;"] > div > div')
+        shadow_roots: Node = div_host.shadow_roots[0]
+        iframe: Node = shadow_roots.children[0]
+        iframe: Element = element.create(iframe, tab, iframe.content_document)
+        await tab.sleep(1)
+
+        iframe: Tab = switch_frame(browser, iframe)
+        # await iframe_tab.get_content()
+        await tab.sleep(1.3)
+        div_host: Element = await iframe.select("body")
+        shadow_roots: Node = div_host.shadow_roots[0]
+        # div => main-wrapper
+        div_: Node = shadow_roots.children[1]
+        wrapper: Element = element.create(div_, iframe, div_.content_document)
+        
+        cf_input = await wrapper.query_selector("div label.cb-lb > input")
+        cf_input = await wrapper.query_selector("div label.cb-lb > input")
+
+        await cf_input.mouse_click()
+        await tab.sleep(3)
+        
+    except Exception as e:
+        time.sleep(5)
+        pass

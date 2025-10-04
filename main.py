@@ -3,7 +3,6 @@ import logging
 import sys, os, platform
 import re
 import requests
-from colorama import init, Fore
 from nodriver import Tab, cdp, Element, Browser, start
 from nodriver.core import element
 from nodriver.cdp.dom import Node
@@ -20,32 +19,20 @@ import socket
 from datetime import datetime, timedelta
 from utils.nodriverUtil import configure_proxy, browser_connect, change_proxy, \
     wait_for_element, check_for_element, check_for_elements, wait_for_elements, get_all_extension,\
-    get_extension_id_by_name, add_tampermonkey_scripts
-from utils.helpers import read_js_script, save_js_script
-
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.StreamHandler(),
-        logging.FileHandler('cloudflare_bypass.log', mode='w')
-    ]
-)
-
-init(autoreset=True)
+    get_extension_id_by_name, add_tampermonkey_scripts, switch_frame, click_verify
+from utils.helpers import read_js_script, save_js_script, log_line
 
 
 async def worker(thread_num, initial_url, is_nopeCha, browsers_amount, proxy_list, is_madridista, numero, contrasena, is_vpn, adspower_api=None, adspower_id=None):
-    print(thread_num, type(thread_num))
     """
     Worker function to run the code in a separate thread.
     
     :param thread_num: Thread number for assigning unique browser profile and extensions.
     """
     if not adspower_api:
-        logging.info(f'Thread {thread_num} started.')
+        log_line("info", f'Thread {thread_num} started.')
     else:
-        logging.info(f'Browser {adspower_id} started')
+        log_line("info", f'Browser {adspower_id} started')
     
     # Arguments to make the browser better for automation and less detectable.
     arguments = [
@@ -88,7 +75,6 @@ async def worker(thread_num, initial_url, is_nopeCha, browsers_amount, proxy_lis
     time.sleep(5)
 
     
-
     await tab.send(cdp.page.add_script_to_evaluate_on_new_document(
         source="""
             Element.prototype._as = Element.prototype.attachShadow;
@@ -101,55 +87,29 @@ async def worker(thread_num, initial_url, is_nopeCha, browsers_amount, proxy_lis
     while True:
         try:
             for driver_tab in driver.tabs:
+                if (
+                    await check_for_element(driver_tab, "//*[contains(text(), 'Sorry, you have been blocked')]", xpath=True)
+                    or await check_for_element(driver_tab, "//*[contains(text(), '404 Not Found')]", xpath=True)
+                    or await check_for_element(
+                        driver_tab,
+                        'a[href="https://developers.cloudflare.com/support/troubleshooting/http-status-codes/cloudflare-1xxx-errors/error-1015/"]'
+                    )
+                ):
+                    await change_proxy(driver_tab)
+                    await driver_tab.get(initial_url)
+                if driver_tab.url == "https://www.realmadrid.com/es-ES":
+                    await driver_tab.get(initial_url)
                 await click_verify(driver, driver_tab)
         except Exception as e: 
-            print(e)
+            log_line('error', e)
             time.sleep(5)
             continue
-
-def switch_frame(browser, iframe) -> Tab:
-    iframe: Tab = next(
-        filter(
-            lambda x: str(x.target.target_id) == str(iframe.frame_id), browser.targets
-        )
-    )
-    iframe.websocket_url = iframe.websocket_url.replace("iframe", "page")
-    return iframe
-
-async def click_verify(browser: Browser, tab: Tab):
-    try:
-
-        div_host: Element = await check_for_element(tab, 'div[style="display: grid;"] > div > div')
-        shadow_roots: Node = div_host.shadow_roots[0]
-        iframe: Node = shadow_roots.children[0]
-        iframe: Element = element.create(iframe, tab, iframe.content_document)
-        await tab.sleep(1)
-
-        iframe: Tab = switch_frame(browser, iframe)
-        # await iframe_tab.get_content()
-        await tab.sleep(1.3)
-        div_host: Element = await iframe.select("body")
-        shadow_roots: Node = div_host.shadow_roots[0]
-        # div => main-wrapper
-        div_: Node = shadow_roots.children[1]
-        wrapper: Element = element.create(div_, iframe, div_.content_document)
-        
-        cf_input = await wrapper.query_selector("div label.cb-lb > input")
-        cf_input = await wrapper.query_selector("div label.cb-lb > input")
-
-        await cf_input.mouse_click()
-        await tab.sleep(3)
-        
-    except Exception as e:
-        # logging.error("couldn't click button: %s", e)
-        time.sleep(5)
-        pass
 
 
 async def close_extra_tabs(driver):
     for driver_tab in driver.tabs:
-        print(driver_tab)
         if driver_tab.url not in ["chrome://newtab/", "about:blank"] : await driver_tab.close()
+
 
 @eel.expose
 def main(initialUrl, isNopeCha, browsersAmount, proxyList, isMadridista,
@@ -197,6 +157,7 @@ def main(initialUrl, isNopeCha, browsersAmount, proxyList, isMadridista,
     for t in threads:
         t.join()
 
+
 def _run_coro_in_thread(coro):
     """Run an async coroutine in a fresh event loop inside a thread."""
     loop = asyncio.new_event_loop()
@@ -205,6 +166,7 @@ def _run_coro_in_thread(coro):
         loop.run_until_complete(coro)
     finally:
         loop.close()
+
 
 def _normalize_adspower_ids(adspower_ids):
     """Accepts list or multiline string, returns list[str]."""

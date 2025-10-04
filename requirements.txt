@@ -7,6 +7,7 @@ click==8.1.7
 colorama==0.4.6
 cssselect==1.2.0
 DataRecorder==3.5.3
+Deprecated==1.2.18
 DownloadKit==2.0.4
 DrissionPage==4.0.5.6
 Eel==0.18.2
@@ -19,6 +20,8 @@ greenlet==3.2.4
 idna==3.10
 importlib_resources==6.5.2
 lxml==5.3.0
+mss==10.1.0
+nodriver==0.47.0
 numpy==2.3.2
 opencv-python==4.10.0.84
 openpyxl==3.1.5
@@ -30,9 +33,12 @@ pyparsing==3.2.3
 pytesseract==0.3.13
 requests==2.32.3
 requests-file==2.1.0
+setuptools==80.9.0
 tldextract==5.1.2
 typing_extensions==4.14.1
 urllib3==2.2.3
 websocket-client==1.8.0
+websockets==15.0.1
+wrapt==1.17.3
 zope.event==5.1.1
 zope.interface==7.2
