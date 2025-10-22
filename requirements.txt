@@ -9,7 +9,6 @@ cssselect==1.2.0
 DataRecorder==3.5.3
 Deprecated==1.2.18
 DownloadKit==2.0.4
-DrissionPage==4.0.5.6
 Eel==0.18.2
 et-xmlfile==1.1.0
 filelock==3.16.1

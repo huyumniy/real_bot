@@ -149,6 +149,20 @@
   let $$ = window.jQuery;
   let $$x = _xpath;
 
+  function handleRedirects() {
+    setInterval(() => {
+      if (window.location.href.includes("oneboxtm.queue-it.net/error/timestamp") ||
+          window.location.href.includes("oneboxtm.queue-it.net/error")) {
+        console.log("Redirect detected, reloading the page...");
+        setTimeout(() => {
+          window.location.href = $settings.url;
+        }, 5000);
+      }
+    }, 2000);
+  }
+
+  handleRedirects();
+
   function findConfirmElementAndSimulateClick() {
     setInterval(() => {
       const element = document.getElementById("buttonConfirmRedirect");
@@ -278,7 +292,7 @@
         myObjectStringCopa ||
         myObjectStringSilver ||
         myObjectStringGold;
-      
+
       if (!myObjectString) {
         alert("no myObjectString found");
         // Відповідна рядок JSON не знайдена в sessionStorage
@@ -290,8 +304,8 @@
         // console.log(myObject.order.items, "GOVNINAINIASDFNASDFNIASDF");
 
         if (itemsQuantity >= $settings.ticketsToBuy) {
-          
-          let selection = ""; 
+
+          let selection = "";
           myObject.order.items.map((seat => {
             selection +=
             "\n" +
@@ -314,7 +328,7 @@
             " ticket(s) found!" +
             selection;
           _notify(message);
-          
+
           console.log( itemsQuantity + " ticket(s) found!");
           console.log( itemsQuantity);
 
@@ -357,7 +371,7 @@
         var nearestSets = [];
         let scriptFinish = false;
         let selection = "";
-        
+
         getTribunes(sessionInfo).forEach((tribune) => {
           console.log(
             "===========================TRIBUNE=================",
@@ -491,7 +505,7 @@
           areSeatsFound = true;
         }
       });
-      
+
       if (areSeatsFound) {
         scriptFinish = true;
       }
@@ -726,6 +740,11 @@
     resp.element.links = resp.element.links.filter((item) => {
       return item.targetView.availability.available >= $settings.ticketsToBuy; // && minPriceFlag && maxPriceFlag;
     });
+    if (!!$settings.selectedViews.length) {
+      resp.element.links = resp.element.links.filter((item) => {
+        return $settings.selectedViews.includes(item.targetView.name)
+      })
+    }
     console.log("RESP ELEMENT LINKS!!!!", resp.element.links);
     return resp.element.links;
   }
@@ -870,7 +889,7 @@
   function _getSettings() {
     console.log("Settings", window.localStorage.ticketBotSettings);
     let settings = unsafeWindow.ticketBotSettings || null;
-    if (settings === null) {
+    if (settings === null && window.localStorage.ticketBotSettings) {
       settings = JSON.parse(window.localStorage.ticketBotSettings);
     }
     if (!settings || typeof settings !== "object") {
@@ -885,6 +904,7 @@
       maxPrice: settings.maxPrice || null,
 
       ticketsToBuy: settings.ticketsToBuy || 2,
+      selectedViews: settings.selectedViews || [],
       allowSeparateTickets: settings.allowSeparateTickets || false,
 
       telegramBotChatId: settings.telegramBotChatId || null,
@@ -1400,6 +1420,5 @@ getcookie func
     }, 20000); // Інтервал у мілісекундах (20 секунд)
   }
 
-  // Запускаємо функцію
   findCookieElementAndSimulateClick();
 })();

@@ -1,204 +1,170 @@
 import time
-import logging
-import sys, os, platform
-import re
-import requests
-from nodriver import Tab, cdp, Element, Browser, start
-from nodriver.core import element
-from nodriver.cdp.dom import Node
-import threading
-import random
-import json
-import base64
-import pytesseract as pyt
-import nodriver as uc
-import cv2
 import asyncio
-import eel
-import socket
-from datetime import datetime, timedelta
-from utils.nodriverUtil import configure_proxy, browser_connect, change_proxy, \
-    wait_for_element, check_for_element, check_for_elements, wait_for_elements, get_all_extension,\
-    get_extension_id_by_name, add_tampermonkey_scripts, switch_frame, click_verify
-from utils.helpers import read_js_script, save_js_script, log_line
+import threading
+from typing import List, Optional, Sequence
 
+from utils.helpers import log_line, clean_adspower_ids, \
+    build_adspower_profile_url, generate_profile_name
+from utils.driver_controller import DriverController
+from config import AppConfig
+from eel_app import EelApp
 
-async def worker(thread_num, initial_url, is_nopeCha, browsers_amount, proxy_list, is_madridista, numero, contrasena, is_vpn, adspower_api=None, adspower_id=None):
+BETWEEN_WORKERS_STAGGER_SEC = 15.0
+
+class MainLoop:
     """
-    Worker function to run the code in a separate thread.
+    Periodically inspects and maintains browser tab state via `DriverController`.
+
+    This class runs continuously in an asyncio loop, invoking the controller's checks
+    and recovery routines on all open browser tabs at fixed intervals.
+
+    Responsibilities:
+    - Keep the browser session active by calling DriverController methods.
+    - Handle exceptions gracefully to ensure continuous operation.
     
-    :param thread_num: Thread number for assigning unique browser profile and extensions.
+    note:
+    MainLoop does not implement the maintenance logic itself; it relies on DriverController for that.
     """
-    if not adspower_api:
-        log_line("info", f'Thread {thread_num} started.')
-    else:
-        log_line("info", f'Browser {adspower_id} started')
-    
-    # Arguments to make the browser better for automation and less detectable.
-    arguments = [
-         "-no-first-run",
-        "-force-color-profile=srgb",
-        "-metrics-recording-only",
-        "-password-store=basic",
-        "-use-mock-keychain",
-        "-export-tagged-pdf",
-        "-no-default-browser-check",
-        "-disable-background-mode",
-        "-enable-features=NetworkService,NetworkServiceInProcess,LoadCryptoTokenExtension,PermuteTLSExtensions",
-        "-disable-features=FlashDeprecationWarning,EnablePasswordsAccountStorage",
-        "-deny-permission-prompts",
-        "-disable-gpu",
-        "-accept-lang=en-US",
-    ]
+    def __init__(self, controller: DriverController) -> None:
+        self.controller = controller
+        self._running = False
 
-    adspower_link = f"{adspower_api}/api/v1/browser/start?serial_number={adspower_id}" if adspower_api else adspower_api
-    chrome_profile_name = f"{os.name}_{adspower_id}" if adspower_id and adspower_api else f"{os.name}_{thread_num}"
-    # Initialize the browser
-    driver = await browser_connect(adspower_link)
+    async def run(self) -> None:
+        self._running = True
+        while self._running:
+            try:
+                
+                for t in list(self.controller.driver.tabs):
+                    await self.controller.recover_if_blocked(t)
+                    await self.controller.reload_initial_if_home_redirect(t)
+                    await self.controller.click_verify(self.controller.driver, t)
+                    
+                    if 'oneboxtm.queue-it.net/error' in t.url \
+                     or 'oneboxtm.queue-it.net/error403' in t.url:
+                        await self.controller.change_proxy(t)
+                        await t.get(self.controller.initial_url)
+                    await self.controller.check_for_element(t,\
+                    '#buttonConfirmRedirect', click=True)
+                
+                await asyncio.sleep(5)
 
-    tab = driver.main_tab
-    time.sleep(10)
-    await tab.activate()
-    time.sleep(1)
+            except Exception as exc:
+                log_line("error", f"MainLoop error: {exc}")
+                await asyncio.sleep(5.0)
 
-    await close_extra_tabs(driver)
-    await configure_proxy(tab, proxy_list)
-    time.sleep(5)
-    await add_tampermonkey_scripts(tab, chrome_profile_name)
+    def stop(self) -> None:
+        self._running = False
 
-   
-    await driver.get(initial_url)
-    for driver_tab in driver.tabs:
-        install_button = await check_for_element(driver_tab, 'div[class="ask_action_buttons"] > input:nth-child(1)')
-        if install_button:
-            await install_button.click()
-    time.sleep(5)
 
-    
-    await tab.send(cdp.page.add_script_to_evaluate_on_new_document(
-        source="""
-            Element.prototype._as = Element.prototype.attachShadow;
-            Element.prototype.attachShadow = function (params) {
-                return this._as({mode: "open"})
-            };
-        """
-    ))
-    
-    while True:
+class BrowserWorker:
+    """
+    An autonomous browser worker running in its own thread.
+
+    Lifecycle:
+    - `run()` creates a new asyncio event loop bound to the thread and runs `_run_async()`.
+    - `_run_async()` initializes the DriverController, performs setup/navigation, then
+      starts the `MainLoop` to maintain browser state.
+    """
+    def __init__(
+        self,
+        index: int,
+        config: AppConfig,
+        adspower_id: Optional[str] = None,
+    ) -> None:
+        self.index = index
+        self.config = config
+        self.adspower_id = adspower_id
+        self.controller: Optional[DriverController] = None
+        self.loop_task: Optional[asyncio.Task] = None
+
+    def run(self) -> None:
+        """Entry point for the thread"""
+        name = f"Browser {self.adspower_id}" if self.adspower_id \
+        else f"Thread {self.index}"
+        log_line("success", f"{name} started")
+        self._run_coroutine_in_flesh_loop(self._run_async())
+        
+    def _run_coroutine_in_flesh_loop(self, coro: asyncio.coroutines) -> None:
+        loop = asyncio.new_event_loop()
         try:
-            for driver_tab in driver.tabs:
-                if (
-                    await check_for_element(driver_tab, "//*[contains(text(), 'Sorry, you have been blocked')]", xpath=True)
-                    or await check_for_element(driver_tab, "//*[contains(text(), '404 Not Found')]", xpath=True)
-                    or await check_for_element(
-                        driver_tab,
-                        'a[href="https://developers.cloudflare.com/support/troubleshooting/http-status-codes/cloudflare-1xxx-errors/error-1015/"]'
-                    )
-                ):
-                    await change_proxy(driver_tab)
-                    await driver_tab.get(initial_url)
-                if driver_tab.url == "https://www.realmadrid.com/es-ES":
-                    await driver_tab.get(initial_url)
-                await click_verify(driver, driver_tab)
-        except Exception as e: 
-            log_line('error', e)
-            time.sleep(5)
-            continue
+            asyncio.set_event_loop(loop)
+            loop.run_until_complete(coro)
+        finally:
+            loop.close()
+    
+    async def _run_async(self) -> None:
+        link = build_adspower_profile_url(self.config.options.adspower_api, self.adspower_id)
+        profile = generate_profile_name(self.index, self.adspower_id)
+
+        self.controller = DriverController(
+            initial_url=self.config.initial_url,
+            proxy_list=self.config.options.proxy_list,
+            profile_name=profile,
+            adspower_link=link,
+        )
+
+        await self.controller.setup_driver()
+        await self.controller.post_connect_setup()
+        await self.controller.navigate_to_initial_url()
+
+        loop = MainLoop(self.controller)
+        await loop.run()
 
 
-async def close_extra_tabs(driver):
-    for driver_tab in driver.tabs:
-        if driver_tab.url not in ["chrome://newtab/", "about:blank"] : await driver_tab.close()
+class WorkersOrchestrator:
+    """
+    Creates and manages browser workers; public entry is `launch()`.
 
+    Behavior:
+    - If Adspower IDs and API are provided, launches one worker per profile.
+    - Otherwise launches a fixed number of plain browser workers `browser_amount`.
+    - Starts workers with a stagger to avoid bursty resource use.
+    - Blocks the caller via `join()` until all worker threads exit.
 
-@eel.expose
-def main(initialUrl, isNopeCha, browsersAmount, proxyList, isMadridista,
-         numero, contrasena, isVpn, adspower_api=None, adspower_ids=[]):
+    note:
+    staggering can be disabled by setting `is_stagger_enabled` to False.
+    """
+    def __init__(self, config: AppConfig) -> None:
+        self.config = config
+        self.threads: List[threading.Thread] = []
+        self.is_stagger_enabled = True
 
-    print(initialUrl, isNopeCha, browsersAmount, isMadridista, numero, contrasena, isVpn)
+    def launch(self) -> None:
+        """Launch workers either with AdsPower profiles or plain multi-browser run."""
+        opts = self.config.options
+        adspower_ids = clean_adspower_ids(opts.adspower_ids)
 
-    adspower_ids = _normalize_adspower_ids(adspower_ids)
-    threads = []
+        if not opts.adspower_api and not adspower_ids:
+            self._launch_without_adspower()
+        else:
+            self._launch_with_adspower(adspower_ids)
+        
+        for t in self.threads:
+            t.join()
 
-    if not adspower_api and not adspower_ids:
-        # No AdsPower: launch N workers
-        for i in range(1, int(browsersAmount) + 1):
-            if i != 1:
-                time.sleep(i * 15)
-            t = threading.Thread(
-                target=_run_coro_in_thread,
-                args=(worker(
-                    i, initialUrl, isNopeCha, browsersAmount, proxyList,
-                    isMadridista, numero, contrasena, isVpn,  # core args
-                    None,  # adspower_api
-                    None   # adspower_id
-                ),),
-                daemon=True
-            )
-            threads.append(t)
-            t.start()
-    else:
-        # With AdsPower: one worker per id
-        for i, adspower_id in enumerate(adspower_ids, 1):
-            if i != 1:
-                time.sleep(i * 15)
-            t = threading.Thread(
-                target=_run_coro_in_thread,
-                args=(worker(
-                    i, initialUrl, isNopeCha, browsersAmount, proxyList,
-                    isMadridista, numero, contrasena, isVpn,
-                    adspower_api, adspower_id
-                ),),
-                daemon=True
-            )
-            threads.append(t)
+    def _launch_without_adspower(self) -> None:
+        for i in range(1, self.config.options.browsers_amount + 1):
+            self._stagger_start(i)
+            worker = BrowserWorker(index=i, config=self.config)
+            t = threading.Thread(target=worker.run, daemon=True)
+            self.threads.append(t)
             t.start()
 
-    for t in threads:
-        t.join()
+    def _launch_with_adspower(self, adspower_ids: Sequence[str]) -> None:
+        for i, adspower_id in enumerate(adspower_ids, start=1):
+            self._stagger_start(i)
+            worker = BrowserWorker(index=i, config=self.config, adspower_id=adspower_id)
+            t = threading.Thread(target=worker.run, daemon=True)
+            self.threads.append(t)
+            t.start()
 
+    def _stagger_start(self, worker_index: int) -> None:
+        if worker_index != 1 and self.is_stagger_enabled:
+            time.sleep(worker_index * BETWEEN_WORKERS_STAGGER_SEC)
 
-def _run_coro_in_thread(coro):
-    """Run an async coroutine in a fresh event loop inside a thread."""
-    loop = asyncio.new_event_loop()
-    try:
-        asyncio.set_event_loop(loop)
-        loop.run_until_complete(coro)
-    finally:
-        loop.close()
-
-
-def _normalize_adspower_ids(adspower_ids):
-    """Accepts list or multiline string, returns list[str]."""
-    if isinstance(adspower_ids, str):
-        return [line.strip() for line in adspower_ids.splitlines() if line.strip()]
-    elif isinstance(adspower_ids, (list, tuple)):
-        return [str(x).strip() for x in adspower_ids if str(x).strip()]
-    return []
-
-
-def is_port_open(host, port):
-    try:
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.settimeout(1)
-        sock.connect((host, port))
-        return True
-    except (socket.timeout, ConnectionRefusedError):
-        return False
-    finally:
-        sock.close()
-
+def _launch(config):
+    WorkersOrchestrator(config).launch()
 
 if __name__ == "__main__":
-    eel.init('web')
-    
-    port = 8001
-    while True:
-        try:
-            if not is_port_open('localhost', port):
-                eel.start('main.html', size=(600, 900), port=port)
-                break
-            else:
-                port += 1
-        except OSError as e:
-            print(e)
+    app = EelApp(web_folder="web", on_launch=_launch)
+    app.start()

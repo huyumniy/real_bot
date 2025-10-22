@@ -110,16 +110,12 @@
             adspowerInput.style.display = this.checked ? 'block' : 'none';
             proxyInput.style.display = this.checked ? 'none' : 'block';
 
-            const serverName = document.querySelector('#serverNameContainer')
             const browserAmount = document.querySelector('#browserAmountContainer')
-            const serverNameInput = document.querySelector('#serverName')
             const browserAmountInput = document.querySelector('#browserAmount')
 
 
-            serverName.style.display = this.checked ? 'none' : 'block';
             browserAmount.style.display = this.checked ? 'none' : 'block';
 
-            serverNameInput.value = ''
             browserAmountInput.value = ''
             
             const adspowerApiContainer = document.querySelector('#adspowerApiContainer')
