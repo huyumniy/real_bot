@@ -72,15 +72,15 @@ https://docs.google.com/spreadsheets/d/1TniFrgJi9yJ2eUiCzCRistLUDCzn_v3udrZwhOzm
 
 ## Spreadsheet Configuration sample
 
-![spreadsheets config sample](samples/spreadsheets_config_sample.png)
+<img src="samples/spreadsheets_config_sample.png" width="1200">
 
 # GUI sample
 
-![gui_sample](samples/gui_sample.png)
+<img src="samples/gui_sample.png" width="400">
 
 # Telegram message sample
 
-![telegram message sample](samples/telegram_message_sample.png)
+<img src="samples/telegram_message_sample.png" width="400">
 
 # Notification service sample
 
