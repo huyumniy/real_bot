@@ -149,16 +149,22 @@
   let $$ = window.jQuery;
   let $$x = _xpath;
 
+
   function handleRedirects() {
     setInterval(() => {
       if (window.location.href.includes("oneboxtm.queue-it.net/error/timestamp") ||
-          window.location.href.includes("oneboxtm.queue-it.net/error")) {
-        console.log("Redirect detected, reloading the page...");
-        setTimeout(() => {
-          window.location.href = $settings.url;
-        }, 5000);
+          window.location.href.includes("oneboxtm.queue-it.net/error") ||
+          (window.location.href.includes("https://www.realmadrid.com/")
+          && !window.location.href.includes("/select/"))) {
+        const targetUrl = $settings?.url ?? retrieveEventUrl();
+        if (targetUrl) {
+          console.log("Redirect detected, reloading the page...");
+          setTimeout(() => {
+            window.location.href = targetUrl;
+          }, 5000);
+        }
       }
-    }, 2000);
+    }, 20000);
   }
 
   handleRedirects();
@@ -177,7 +183,7 @@
       if (btnQueue) {
         // Натискання на посилання
         let queueError = _xpath(
-          '//*[contains(text(), "Número de cola rechazado") or contains(text(), "Has tardado demasiado en resolver el captcha") or contains(text(), "Queue number rejected") or contains(text(), "Número de cola usado")]'
+          '//*[contains(text(), "Número de cola rechazado") or contains(text(), "Has tardado demasiado en resolver el captcha") or contains(text(), "Queue number rejected") or contains(text(), "Número de cola usado") or contains(text(), "Acceso restringido")]'
         );
         if (queueError) {
           console.log("DELETED COOKIES");
@@ -273,6 +279,10 @@
         "trackingInfo_realmadrid_champions"
       );
 
+      let myObjectStringDay = sessionStorage.getItem(
+        "trackingInfo_realmadrid_ligamatchday"
+      );
+
       let myObjectStringCopa = sessionStorage.getItem(
         "trackingInfo_realmadrid_copadelrey"
       );
@@ -285,10 +295,10 @@
         "trackingInfo_realmadrid_ligavigold"
       );
 
-      // Вибрати між myObjectStringLaLiga, myObjectStringCL та myObjectStringCopa
       let myObjectString =
         myObjectStringLaLiga ||
         myObjectStringCL ||
+        myObjectStringDay ||
         myObjectStringCopa ||
         myObjectStringSilver ||
         myObjectStringGold;
@@ -320,7 +330,9 @@
 
           let hot = "\uD83D\uDD25";
           let eventName = myObject.channel.name;
+          let userName = $settings.userName || "User";
           let message =
+            "👤 " + userName + "\n" +
             hot +
             eventName +
             "\n" +
@@ -896,6 +908,7 @@
       return null;
     }
     return {
+      userName: settings.userName || "User",
       chromeProfile: settings.chromeProfile || "undefined",
       indexUrl: settings.indexUrl || null,
       url: settings.url || null,
@@ -1196,6 +1209,12 @@ getcookie func
     }
   }
 
+
+  function retrieveEventUrl() {
+    const match = document.cookie.match(/(?:^|; )savedUrl=([^;]*)/);
+    if (match) return decodeURIComponent(match[1]);
+  }
+
   function findElementAndSimulateClick() {
     setInterval(() => {
       const element = document.querySelector(
@@ -1384,7 +1403,7 @@ getcookie func
     const interval = setInterval(() => {
       if (
         _xpath(
-          "//*[contains(text(), 'Sorry, you have been blocked')]",
+          "//*[contains(text(), 'Sorry, you have been blocked') or contains(text(), 'You are being rate limited')]",
           window.document
         ).length > 0 &&
         attempt < 1
@@ -1403,6 +1422,20 @@ getcookie func
   }
 
   banHandler();
+
+  function messageDialogsConfirm() {
+    const interval = setInterval(() => {
+      if (document.querySelector('ob-button[data-testid="message-dialog-confirm"]')) {
+        let dialogButtons = document.querySelectorAll('ob-button[data-testid="message-dialog-confirm"]')
+        for (const dialogButton of dialogButtons) {
+          dialogButton.click()
+        }
+        clearInterval(interval);
+      }
+    }, 5000);
+  }
+
+  messageDialogsConfirm()
 
   function findCookieElementAndSimulateClick() {
     setInterval(() => {

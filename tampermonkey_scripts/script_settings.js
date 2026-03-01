@@ -1,11 +1,12 @@
 // ==UserScript==
 // @name         Proticketing Real Madrid Catcher - Settings v3
 // @namespace    https://www.realmadrid.com
-// @version      3.0
-// @description  Settings configuration
+// @version      3.1
+// @description  Settings configuration with user name
 // @author       Megazoid
 // @match        *://*.realmadrid.com/*
 // @match        *://*.tickets.realmadrid.com/*
+// @match        https://oneboxtm.queue-it.net/*
 // @run-at       document-idle
 // @grant        unsafeWindow
 // ==/UserScript==
@@ -13,7 +14,8 @@
 const storedSettings = JSON.parse(localStorage.getItem('ticketBotSettings'));
 
 let settings = storedSettings || {
-  chromeProfile: "nt_2",
+  userName: "User",  // NEW: User name field
+  chromeProfile: "nt_1",
   indexUrl: 'https://www.realmadrid.com/en/tickets',
   url: getSessionUrl(),
   allowSeparateTickets: false,
@@ -29,10 +31,8 @@ let settings = storedSettings || {
   maxPrice: null,
   ticketsToBuy: null,
   selectedViews: [],
-  madridista: { login: '222222', password: '2222222' } && null, // To disable this parameter uncomment && null
+  madridista: { login: '222222', password: '2222222' } && null,
 };
-
-// Пізніше, коли ви отримаєте eventType і eventNumber, ви можете встановити url:
 
 console.log(settings);
 
@@ -45,6 +45,19 @@ function createForm() {
 
   const form = document.createElement('form');
   form.id = 'settingsForm';
+
+  // NEW: Add userName field at the top
+  const userNameLabel = document.createElement('label');
+  userNameLabel.for = 'userName';
+  userNameLabel.textContent = 'Your Name:';
+  form.appendChild(userNameLabel);
+
+  const userNameInput = document.createElement('input');
+  userNameInput.type = 'text';
+  userNameInput.id = 'userName';
+  userNameInput.name = 'userName';
+  form.appendChild(userNameInput);
+  form.appendChild(document.createElement('br'));
 
   const labels = ['minPrice', 'maxPrice', 'ticketsToBuy'];
   labels.forEach((label, index) => {
@@ -114,7 +127,9 @@ function createForm() {
   settingsFormContainer.style.backgroundColor = '#f0f0f0';
   settingsFormContainer.style.border = '1px solid #ccc';
 }
+
 function updateSettings() {
+  const userName = document.getElementById('userName').value;  // NEW
   const minPrice = document.getElementById('minPrice').value;
   const maxPrice = document.getElementById('maxPrice').value;
   const ticketsToBuy = parseInt(document.getElementById('ticketsToBuy').value);
@@ -122,15 +137,20 @@ function updateSettings() {
   
   const selectedViews = Array.from(selectedViewsElements).map(selectedView => selectedView.value)
   
+  settings.userName = userName !== '' ? userName : 'User';  // NEW: Save user name
   settings.minPrice = minPrice !== '' ? minPrice : null;
   settings.maxPrice = maxPrice !== '' ? maxPrice : null;
   settings.ticketsToBuy = ticketsToBuy !== '' ? ticketsToBuy : null;
   settings.selectedViews = !!selectedViews.length ? selectedViews : [];
-  settings.chromeProfile = "nt_2";
+  settings.chromeProfile = "nt_1";
   settings.indexUrl = 'https://www.realmadrid.com/en/tickets';
 
   // Dynamically get the session URL when the button is clicked
   settings.url = getSessionUrl();
+
+  document.cookie = "savedUrl=" + encodeURIComponent(location.href) + "; domain=.realmadrid.com; path=/";
+  console.log("Saved URL in cookie");
+  
 
   settings.allowSeparateTickets = false;
   settings.telegramBotId = '5712671465:AAFqebxudxqEcGp2SZm814vR8RtTKLgEjGs';
@@ -141,7 +161,8 @@ function updateSettings() {
   settings.reload = true;
   settings.secondsToRestartIfNoTicketsFound = 5;
   settings.timesToBrowserTabReload = 200;
-  settings.madridista = { login: '222222', password: '2222222' } && null; // To disable this parameter uncomment && null
+  settings.madridista = { login: '222222', password: '2222222' } && null;
+  
   console.log('Updated settings:', settings);
   localStorage.setItem('ticketBotSettings', JSON.stringify(settings));
 
@@ -155,19 +176,21 @@ function getSessionUrl() {
   const sessionNumber = getSessionNumberFromUrl(currentUrl);
 
   if (sessionNumber) {
-    // Determine the event type based on the URL pattern
     let eventType = '';
     if (currentUrl.includes('realmadrid_futbol')) {
       eventType = 'realmadrid_futbol';
     } else if (currentUrl.includes('realmadrid_champions')) {
       eventType = 'realmadrid_champions';
+    } else if (currentUrl.includes('realmadrid_ligamatchday')) {
+      eventType = 'realmadrid_ligamatchday'
     }
 
-    // Build the URL based on the event type
     if (eventType === 'realmadrid_futbol') {
       return `https://tickets.realmadrid.com/realmadrid_futbol/select/${sessionNumber}?viewCode=V_principal`;
     } else if (eventType === 'realmadrid_champions') {
       return `https://tickets.realmadrid.com/realmadrid_champions/select/${sessionNumber}?viewCode=V_principal`;
+    } else if (eventType === 'realmadrid_ligamatchday') {
+      return `https://tickets.realmadrid.com/realmadrid_ligamatchday/select/${sessionNumber}?viewCode=V_principal`
     }
   }
 
@@ -179,11 +202,16 @@ function getSessionNumberFromUrl(url) {
     'https://tickets.realmadrid.com/realmadrid_futbol/select/';
   const championsPattern =
     'https://tickets.realmadrid.com/realmadrid_champions/select/';
+  const ligamatchdayPattern = 
+    'https://tickets.realmadrid.com/realmadrid_ligamatchday/select/';
+
 
   if (url.startsWith(futbolPattern)) {
     return extractSessionNumber(url, futbolPattern);
   } else if (url.startsWith(championsPattern)) {
     return extractSessionNumber(url, championsPattern);
+  } else if (url.startsWith(ligamatchdayPattern)) {
+    return extractSessionNumber(url, ligamatchdayPattern);
   }
 
   return null;
@@ -196,6 +224,12 @@ function extractSessionNumber(url, urlPattern) {
 
 window.onload = () => {
   createForm();
+
+  // NEW: Load userName from stored settings
+  const userNameInput = document.getElementById('userName');
+  if (userNameInput && storedSettings && storedSettings['userName'] !== undefined) {
+    userNameInput.value = storedSettings['userName'];
+  }
 
   const labels = ['minPrice', 'maxPrice', 'ticketsToBuy'];
   labels.forEach((label) => {

@@ -168,3 +168,7 @@ cython_debug/
 
 refactored_main.py
 refactored.py
+real_server/
+BP-Proxy-Switcher-Chrome/.DS_Store
+NopeCHA/.DS_Store
+tampermonkey/.DS_Store
