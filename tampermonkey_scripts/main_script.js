@@ -1426,6 +1426,20 @@ getcookie func
 
   banHandler();
 
+   function messageDialogsConfirm() {
+    const interval = setInterval(() => {
+      if (document.querySelector('ob-button[data-testid="message-dialog-confirm"]')) {
+        let dialogButtons = document.querySelectorAll('ob-button[data-testid="message-dialog-confirm"]')
+        for (const dialogButton of dialogButtons) {
+          dialogButton.click()
+        }
+        clearInterval(interval);
+      }
+    }, 5000);
+  }
+
+  messageDialogsConfirm()
+
   function findCookieElementAndSimulateClick() {
     setInterval(() => {
       const element = document.querySelector("button.primary.cookie-button");
