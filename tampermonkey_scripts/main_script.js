@@ -772,10 +772,12 @@
         xhr.setRequestHeader(keyName, headerRequests[cachedUrl][keyName]);
       });
     } else {
-      xhr.setRequestHeader("pragma", "no-cache");
-      xhr.setRequestHeader("cache-control", "no-cache");
-      xhr.setRequestHeader("ob-channel", getObChannelName());
-      xhr.setRequestHeader("ob-language", "en_US");
+      //xhr.setRequestHeader("pragma", "no-cache");
+      //xhr.setRequestHeader("cache-control", "no-cache");
+      // xhr.setRequestHeader("ob-channel", getObChannelName());
+      xhr.setRequestHeader("ob-client", "channels");
+      xhr.setRequestHeader("ob-language", "en-US");
+      xhr.setRequestHeader("priority", "u=1, i");
       // xhr.setRequestHeader("x-xsrf-token", _getCookie("XSRF-TOKEN"));
       xhr.setRequestHeader("accept", "application/json, text/plain, */*");
       // xhr.setRequestHeader(
@@ -838,6 +840,7 @@
       return JSON.parse(xhr.responseText);
     }
   }
+
 
   function _getCookie(cname) {
     let name = cname + "=";
@@ -1423,20 +1426,6 @@ getcookie func
 
   banHandler();
 
-  function messageDialogsConfirm() {
-    const interval = setInterval(() => {
-      if (document.querySelector('ob-button[data-testid="message-dialog-confirm"]')) {
-        let dialogButtons = document.querySelectorAll('ob-button[data-testid="message-dialog-confirm"]')
-        for (const dialogButton of dialogButtons) {
-          dialogButton.click()
-        }
-        clearInterval(interval);
-      }
-    }, 5000);
-  }
-
-  messageDialogsConfirm()
-
   function findCookieElementAndSimulateClick() {
     setInterval(() => {
       const element = document.querySelector("button.primary.cookie-button");
@@ -1454,4 +1443,6 @@ getcookie func
   }
 
   findCookieElementAndSimulateClick();
+
+
 })();

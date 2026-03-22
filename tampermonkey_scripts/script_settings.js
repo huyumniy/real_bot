@@ -86,7 +86,7 @@ function createForm() {
   selectViewContainer.id = "selectViewContainer";
   selectViewContainer.style.display = "grid";
   selectViewContainer.style.gridTemplateColumns = "1fr 1fr";
-  
+
   const viewLabels = ["Fondo Sur", "Fondo Norte", "Lateral Oeste", "Lateral Este"];
 
   viewLabels.forEach((viewLabel) => {
@@ -103,13 +103,13 @@ function createForm() {
     viewCheckbox.id = viewLabel;
     viewCheckbox.name = viewLabel;
     viewCheckbox.value = viewLabel;
-    
-    
+
+
     viewContainer.appendChild(viewCheckboxLabel);
     viewContainer.appendChild(viewCheckbox);
     selectViewContainer.append(viewContainer);
   });
-  
+
   form.appendChild(selectViewContainer);
 
   const updateButton = document.createElement('button');
@@ -134,9 +134,9 @@ function updateSettings() {
   const maxPrice = document.getElementById('maxPrice').value;
   const ticketsToBuy = parseInt(document.getElementById('ticketsToBuy').value);
   const selectedViewsElements = document.querySelectorAll("#selectViewContainer > div > input:checked")
-  
+
   const selectedViews = Array.from(selectedViewsElements).map(selectedView => selectedView.value)
-  
+
   settings.userName = userName !== '' ? userName : 'User';  // NEW: Save user name
   settings.minPrice = minPrice !== '' ? minPrice : null;
   settings.maxPrice = maxPrice !== '' ? maxPrice : null;
@@ -150,7 +150,7 @@ function updateSettings() {
 
   document.cookie = "savedUrl=" + encodeURIComponent(location.href) + "; domain=.realmadrid.com; path=/";
   console.log("Saved URL in cookie");
-  
+
 
   settings.allowSeparateTickets = false;
   settings.telegramBotId = '5712671465:AAFqebxudxqEcGp2SZm814vR8RtTKLgEjGs';
@@ -162,7 +162,7 @@ function updateSettings() {
   settings.secondsToRestartIfNoTicketsFound = 5;
   settings.timesToBrowserTabReload = 200;
   settings.madridista = { login: '222222', password: '2222222' } && null;
-  
+
   console.log('Updated settings:', settings);
   localStorage.setItem('ticketBotSettings', JSON.stringify(settings));
 
@@ -202,7 +202,7 @@ function getSessionNumberFromUrl(url) {
     'https://tickets.realmadrid.com/realmadrid_futbol/select/';
   const championsPattern =
     'https://tickets.realmadrid.com/realmadrid_champions/select/';
-  const ligamatchdayPattern = 
+  const ligamatchdayPattern =
     'https://tickets.realmadrid.com/realmadrid_ligamatchday/select/';
 
 
@@ -241,9 +241,9 @@ window.onload = () => {
 
   const storedViews = storedSettings['selectedViews']
   const viewCheckboxes = document.querySelectorAll("#selectViewContainer > div > input")
-  
+
   viewCheckboxes.forEach((viewCheckbox) => {
-    if (storedViews !== null && storedViews.includes(viewCheckbox.value)) 
+    if (storedViews !== null && storedViews.includes(viewCheckbox.value))
       viewCheckbox.checked = true;
   });
 };
