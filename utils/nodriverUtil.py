@@ -59,7 +59,7 @@ async def browser_connect(open_url=None):
 
     # Add extensions
     print(f"[DEBUG] Adding all extension...")
-    config.add_extension(extension_path=nopecha_path)
+    # config.add_extension(extension_path=nopecha_path)
     config.add_extension(extension_path=tampermonkey_path)
     config.add_extension(extension_path=bpproxyswitcher_path)
 
